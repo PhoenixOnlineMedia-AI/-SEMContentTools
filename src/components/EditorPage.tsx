@@ -40,13 +40,13 @@ export function EditorPage() {
   const [isInitialized, setIsInitialized] = useState(false);
   const lastSelectionRef = useRef<Range | null>(null);
   const [editorContent, setEditorContent] = useState('');
+  const hasLoadedContent = useRef(false);
 
   useEffect(() => {
-    if (id) {
+    if (id && !hasLoadedContent.current) {
       setCurrentId(id);
       loadContent(id);
-    } else {
-      setCurrentId(null);
+      hasLoadedContent.current = true;
     }
   }, [id, setCurrentId]);
 
@@ -55,25 +55,34 @@ export function EditorPage() {
     const editor = editorRef.current;
     if (!editor) return;
 
-    console.log('Initializing editor with content:', content);
+    console.log('Editor initialization:', {
+      hasContent: !!content,
+      editorContent: editor.innerHTML,
+      isInitialized,
+      hasLoadedContent: hasLoadedContent.current
+    });
 
-    // Only set initial content if editor is empty
-    if (content && editor.innerHTML === '') {
-      console.log('Setting initial content');
+    // Only update editor content if we have content and editor is empty or different
+    if (content && (editor.innerHTML === '' || editor.innerHTML !== content)) {
+      console.log('Setting editor content:', {
+        contentLength: content.length,
+        preview: content.substring(0, 100)
+      });
       editor.innerHTML = content;
       setEditorContent(content);
     }
 
     if (!isInitialized) {
-      // Save selection before any changes
-      const saveSelection = () => {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          // Only save if the selection is within the editor
-          if (editor.contains(range.commonAncestorContainer)) {
-            lastSelectionRef.current = range.cloneRange();
-          }
+      // Handle content changes
+      const handleInput = () => {
+        if (!editorRef.current) return;
+        const newContent = editorRef.current.innerHTML;
+        if (newContent !== content) {
+          console.log('Editor content changed:', {
+            length: newContent.length,
+            preview: newContent.substring(0, 100)
+          });
+          setContent(newContent);
         }
       };
 
@@ -85,26 +94,9 @@ export function EditorPage() {
         }
       };
 
-      // Handle selection changes
-      const handleSelectionChange = () => {
-        saveSelection();
-      };
-
-      // Handle content changes
-      const handleInput = () => {
-        if (!editorRef.current) return;
-        const newContent = editorRef.current.innerHTML;
-        console.log('Editor content updated:', {
-          length: newContent.length,
-          preview: newContent.substring(0, 100)
-        });
-        setContent(newContent);
-      };
-
       // Add event listeners
       editor.addEventListener('input', handleInput);
       editor.addEventListener('keydown', handleKeyDown);
-      document.addEventListener('selectionchange', handleSelectionChange);
 
       setIsInitialized(true);
 
@@ -112,7 +104,6 @@ export function EditorPage() {
       return () => {
         editor.removeEventListener('input', handleInput);
         editor.removeEventListener('keydown', handleKeyDown);
-        document.removeEventListener('selectionchange', handleSelectionChange);
       };
     }
   }, [content, isInitialized, setContent]);
@@ -183,21 +174,10 @@ export function EditorPage() {
           title: data.title,
           keywords: data.keywords,
           contentType: data.content_type,
-          hasContent: !!data.content,
-          hasKeywords: Array.isArray(data.keywords) && data.keywords.length > 0
+          hasContent: !!data.content
         });
-        
-        // Set content first to prevent race conditions
-        const contentToSet = data.content || '';
-        setContent(contentToSet);
-        
-        // Update editor content immediately
-        const editor = editorRef.current;
-        if (editor && editor.innerHTML !== contentToSet) {
-          editor.innerHTML = contentToSet;
-        }
-        
-        // Then set other properties
+
+        // Set other properties first
         setContentType(data.content_type || '');
         setTopic(data.topic || '');
         setTitle(data.title || '');
@@ -205,6 +185,17 @@ export function EditorPage() {
         setMetaDescription(data.meta_description || '');
         setKeywords(data.keywords || []);
         setSelectedKeywords(data.keywords || []);
+        
+        // Set content last
+        const contentToSet = data.content || '';
+        setContent(contentToSet);
+        
+        // Update editor content directly
+        const editor = editorRef.current;
+        if (editor) {
+          editor.innerHTML = contentToSet;
+          setEditorContent(contentToSet);
+        }
       }
     } catch (error: any) {
       console.error('Error loading content:', error);

@@ -239,20 +239,26 @@ export const useContentStore = create<ContentState>((set, get) => ({
     const normalizedContent = content || '';
     const currentState = get();
     
+    // Skip empty content updates unless explicitly setting to empty
+    if (!normalizedContent && currentState.content && !content) {
+      console.log('Skipping empty content update');
+      return;
+    }
+    
     // Only update if content has actually changed
     if (currentState.content !== normalizedContent) {
-      console.log('Content update requested:', {
+      console.log('Content update:', {
         currentLength: currentState.content?.length || 0,
         newLength: normalizedContent.length,
-        hasChanged: true
+        hasChanged: true,
+        isEmpty: !normalizedContent
       });
       
-      set({
+      set((state) => ({
+        ...state,
         content: normalizedContent,
-        selectedKeywords: currentState.selectedKeywords,
-        isLoading: false,
         error: null
-      });
+      }));
     } else {
       console.log('Content unchanged, skipping update');
     }
