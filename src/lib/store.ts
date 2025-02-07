@@ -737,47 +737,90 @@ CRITICAL FORMAT REQUIREMENTS:
 
   saveContent: async () => {
     const state = get();
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      throw new Error('Not authenticated');
-    }
-
     try {
+      console.log('Starting saveContent...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error(`Authentication error: ${sessionError.message}`);
+      }
+      
+      if (!session) {
+        console.error('No authenticated session found');
+        throw new Error('Not authenticated');
+      }
+
+      console.log('Saving content with data:', {
+        contentType: state.contentType,
+        hasTitle: !!state.title,
+        hasContent: !!state.content,
+        contentLength: state.content?.length,
+        keywordsCount: state.selectedKeywords?.length,
+        currentId: state.currentId,
+        userId: session.user.id
+      });
+
       const contentData = {
         user_id: session.user.id,
         content_type: state.contentType,
-        topic: state.topic,
-        title: state.title,
-        outline: state.outline,
-        content: state.content,
-        keywords: state.selectedKeywords,
-        meta_description: state.metaDescription,
+        topic: state.topic || '',
+        title: state.title || state.topic || '',
+        outline: state.outline || [],
+        content: state.content || '',
+        keywords: state.selectedKeywords || [],
+        meta_description: state.metaDescription || state.topic || '',
         updated_at: new Date().toISOString()
       };
 
+      let result;
       if (state.currentId) {
         // Update existing content
-        const { error } = await supabase
+        console.log('Updating existing content with ID:', state.currentId);
+        result = await supabase
           .from('user_content')
           .update(contentData)
           .eq('id', state.currentId);
-
-        if (error) throw error;
       } else {
         // Insert new content
-        const { error } = await supabase
+        console.log('Inserting new content');
+        result = await supabase
           .from('user_content')
           .insert({
             ...contentData,
             created_at: new Date().toISOString()
           });
-
-        if (error) throw error;
       }
+
+      if (result.error) {
+        console.error('Database operation error:', {
+          error: result.error,
+          status: result.status,
+          statusText: result.statusText,
+          data: result.data,
+          count: result.count
+        });
+        throw result.error;
+      }
+
+      console.log('Content saved successfully:', {
+        operation: state.currentId ? 'update' : 'insert',
+        status: result.status,
+        count: result.count
+      });
     } catch (error: any) {
-      console.error('Error saving content:', error);
-      throw new Error(error.message || 'Failed to save content');
+      console.error('Error in saveContent:', {
+        error,
+        name: error.name,
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        status: error?.status,
+        statusText: error?.statusText,
+        stack: error.stack
+      });
+      throw new Error(`Failed to save content: ${error.message}`);
     }
   },
 
