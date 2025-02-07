@@ -236,33 +236,22 @@ export const useContentStore = create<ContentState>((set, get) => ({
   },
   setOutline: (outline) => set({ outline }),
   setContent: (content) => {
-    console.log('Content update requested:', {
-      length: content?.length,
-      preview: content?.substring(0, 100),
-      type: typeof content,
-      isString: typeof content === 'string',
-      isEmpty: !content,
-      stack: new Error().stack
-    });
-    
-    // Only update if content is different from current state
+    const normalizedContent = content || '';
     const currentState = get();
-    const normalizedContent = (typeof content === 'string') ? content : '';
     
+    // Only update if content has actually changed
     if (currentState.content !== normalizedContent) {
-      set((state) => ({ 
-        ...state,
-        content: normalizedContent 
-      }));
+      console.log('Content update requested:', {
+        currentLength: currentState.content?.length || 0,
+        newLength: normalizedContent.length,
+        hasChanged: true
+      });
       
-      // Log the state after update
-      const newState = get();
-      console.log('Store state after content update:', {
-        contentLength: newState.content.length,
-        contentPreview: newState.content.substring(0, 100),
-        hasContent: !!newState.content,
-        keywordsCount: newState.keywords.length,
-        selectedKeywordsCount: newState.selectedKeywords.length
+      set({
+        content: normalizedContent,
+        selectedKeywords: currentState.selectedKeywords,
+        isLoading: false,
+        error: null
       });
     } else {
       console.log('Content unchanged, skipping update');

@@ -57,17 +57,11 @@ export function EditorPage() {
 
     console.log('Initializing editor with content:', content);
 
-    // Initialize content if not already set
-    if (content && editor.innerHTML !== content) {
+    // Only set initial content if editor is empty
+    if (content && editor.innerHTML === '') {
       console.log('Setting initial content');
       editor.innerHTML = content;
       setEditorContent(content);
-      
-      // Create initial undo point
-      editor.focus();
-      document.execCommand('selectAll', false);
-      document.execCommand('insertText', false, content);
-      editor.blur();
     }
 
     if (!isInitialized) {
@@ -121,7 +115,7 @@ export function EditorPage() {
         document.removeEventListener('selectionchange', handleSelectionChange);
       };
     }
-  }, [content, isInitialized, setContent, id]);
+  }, [content, isInitialized, setContent]);
 
   // Handle content updates while preserving selection
   useEffect(() => {
@@ -193,7 +187,17 @@ export function EditorPage() {
           hasKeywords: Array.isArray(data.keywords) && data.keywords.length > 0
         });
         
-        // Set other properties first
+        // Set content first to prevent race conditions
+        const contentToSet = data.content || '';
+        setContent(contentToSet);
+        
+        // Update editor content immediately
+        const editor = editorRef.current;
+        if (editor && editor.innerHTML !== contentToSet) {
+          editor.innerHTML = contentToSet;
+        }
+        
+        // Then set other properties
         setContentType(data.content_type || '');
         setTopic(data.topic || '');
         setTitle(data.title || '');
@@ -201,23 +205,6 @@ export function EditorPage() {
         setMetaDescription(data.meta_description || '');
         setKeywords(data.keywords || []);
         setSelectedKeywords(data.keywords || []);
-        
-        // Set content last and ensure it's a string
-        const contentToSet = data.content || '';
-        setContent(contentToSet);
-        
-        // Update editor content after a small delay to ensure state is updated
-        setTimeout(() => {
-          const editor = editorRef.current;
-          if (editor && editor.innerHTML !== contentToSet) {
-            editor.innerHTML = contentToSet;
-            console.log('Editor content updated:', {
-              length: editor.innerHTML.length,
-              hasContent: !!editor.innerHTML
-            });
-          }
-          setIsInitialized(false); // Reset initialization to force editor setup
-        }, 100);
       }
     } catch (error: any) {
       console.error('Error loading content:', error);
