@@ -33,7 +33,8 @@ export function EditorPage() {
     setCurrentId,
     isLoading,
     setIsLoading,
-    error 
+    error,
+    setError
   } = useContentStore();
   const [showHtml, setShowHtml] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -174,6 +175,7 @@ export function EditorPage() {
   const loadContent = async (contentId: string) => {
     try {
       console.log('Loading content for ID:', contentId);
+      setIsLoading(true);
       const { data, error } = await supabase
         .from('user_content')
         .select('*')
@@ -184,7 +186,6 @@ export function EditorPage() {
       if (data) {
         console.log('Content loaded from database:', {
           contentLength: data.content?.length,
-          fullContent: data.content,
           title: data.title,
           keywords: data.keywords,
           contentType: data.content_type,
@@ -192,41 +193,37 @@ export function EditorPage() {
           hasKeywords: Array.isArray(data.keywords) && data.keywords.length > 0
         });
         
-        // Set content first
-        setContent(data.content || '');
-        
-        // Force editor to update with new content
-        const editor = editorRef.current;
-        if (editor) {
-          editor.innerHTML = data.content || '';
-          console.log('Editor updated:', {
-            innerHTML: editor.innerHTML,
-            length: editor.innerHTML.length,
-            hasContent: !!editor.innerHTML
-          });
-        }
-
-        // Then set other properties
-        setTitle(data.title || '');
+        // Set other properties first
         setContentType(data.content_type || '');
         setTopic(data.topic || '');
+        setTitle(data.title || '');
         setOutline(data.outline || []);
         setMetaDescription(data.meta_description || '');
-        
-        // Set keywords last
-        console.log('Setting keywords:', data.keywords);
         setKeywords(data.keywords || []);
         setSelectedKeywords(data.keywords || []);
         
-        setIsInitialized(false); // Reset initialization to force editor setup
-
-        // Trigger a save to update SEO analysis
+        // Set content last and ensure it's a string
+        const contentToSet = data.content || '';
+        setContent(contentToSet);
+        
+        // Update editor content after a small delay to ensure state is updated
         setTimeout(() => {
-          handleSave();
-        }, 500); // Small delay to ensure state is updated
+          const editor = editorRef.current;
+          if (editor && editor.innerHTML !== contentToSet) {
+            editor.innerHTML = contentToSet;
+            console.log('Editor content updated:', {
+              length: editor.innerHTML.length,
+              hasContent: !!editor.innerHTML
+            });
+          }
+          setIsInitialized(false); // Reset initialization to force editor setup
+        }, 100);
       }
     } catch (error: any) {
       console.error('Error loading content:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 

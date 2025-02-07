@@ -245,26 +245,28 @@ export const useContentStore = create<ContentState>((set, get) => ({
       stack: new Error().stack
     });
     
-    // Ensure we always store a string, even if empty
+    // Only update if content is different from current state
+    const currentState = get();
     const normalizedContent = (typeof content === 'string') ? content : '';
     
-    // Update content first
-    set((state) => ({ 
-      ...state,
-      content: normalizedContent 
-    }));
-    
-    // Log the state after update
-    const newState = get();
-    console.log('Store state after content update:', {
-      contentLength: newState.content.length,
-      contentPreview: newState.content.substring(0, 100),
-      hasContent: !!newState.content,
-      keywordsCount: newState.keywords.length,
-      keywords: newState.keywords,
-      selectedKeywordsCount: newState.selectedKeywords.length,
-      selectedKeywords: newState.selectedKeywords
-    });
+    if (currentState.content !== normalizedContent) {
+      set((state) => ({ 
+        ...state,
+        content: normalizedContent 
+      }));
+      
+      // Log the state after update
+      const newState = get();
+      console.log('Store state after content update:', {
+        contentLength: newState.content.length,
+        contentPreview: newState.content.substring(0, 100),
+        hasContent: !!newState.content,
+        keywordsCount: newState.keywords.length,
+        selectedKeywordsCount: newState.selectedKeywords.length
+      });
+    } else {
+      console.log('Content unchanged, skipping update');
+    }
   },
   setMetaDescription: (description) => set({ metaDescription: description }),
   setCurrentId: (id) => set({ currentId: id }),
