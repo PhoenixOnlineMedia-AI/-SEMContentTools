@@ -1,9 +1,10 @@
-import type { Step } from '../../../lib/store';
+import type { Step, ContentType } from '../../../lib/store';
 import type { Platform } from '../../../lib/deepseek';
 
 export interface ChatPrompt {
   text: string;
   examples: string[];
+  tip?: string;
   hashtags?: {
     text: string;
     examples: string[];
@@ -12,112 +13,222 @@ export interface ChatPrompt {
 
 export type PromptConfig = Record<Step, ChatPrompt>;
 
-export const platformPrompts: Record<Platform, ChatPrompt> = {
-  'Instagram': {
-    text: 'What would you like to share on Instagram?',
-    examples: [
-      'Example: Behind-the-scenes look at our team',
-      'Example: Product showcase with lifestyle photos',
-      'Example: Quick tips and industry insights'
-    ],
-    hashtags: {
-      text: 'Enter your Instagram hashtags (separated by commas):',
+export interface PlatformPrompt {
+  topic: ChatPrompt;
+  title: ChatPrompt;
+  hashtags: ChatPrompt;
+}
+
+export const platformPrompts: Record<Platform, PlatformPrompt> = {
+  Instagram: {
+    topic: {
+      text: 'What would you like to share on Instagram?',
       examples: [
-        'Example: #InstaMarketing, #BrandGrowth, #InstaBusiness',
-        'Mix popular tags like #InstaDaily with niche ones',
-        'Tip: Use up to 5 strategic hashtags for better reach'
+        'Example: Behind-the-scenes content',
+        'Example: Product showcase',
+        'Example: User-generated content feature'
+      ]
+    },
+    title: {
+      text: 'Select a caption style for your post:',
+      examples: [
+        'Example: Engaging and conversational',
+        'Example: Professional and informative',
+        'Example: Fun and entertaining'
+      ]
+    },
+    hashtags: {
+      text: 'What hashtags would you like to use? (comma-separated)',
+      examples: [
+        'Example: #socialmediatips, #digitalmarketing, #growthhacking',
+        'Example: #smallbusiness, #entrepreneurship, #startup',
+        'Example: #brandawareness, #communitybuilding, #engagement'
       ]
     }
   },
   'Twitter/X': {
-    text: 'What would you like to tweet about?',
-    examples: [
-      'Example: Industry news and commentary',
-      'Example: Quick tips in a thread format',
-      'Example: Engaging question for your audience'
-    ],
-    hashtags: {
-      text: 'Enter your Twitter hashtags (separated by commas):',
+    topic: {
+      text: 'What would you like to share on Twitter/X?',
       examples: [
-        'Example: #TechNews, #StartupLife, #Innovation',
-        'Use trending hashtags relevant to your topic',
-        'Tip: 2-3 hashtags work best for Twitter engagement'
+        'Example: Industry insights',
+        'Example: Company updates',
+        'Example: Thought leadership'
+      ]
+    },
+    title: {
+      text: 'Select a tweet style:',
+      examples: [
+        'Example: Concise and impactful',
+        'Example: Question-based engagement',
+        'Example: Data-driven insights'
+      ]
+    },
+    hashtags: {
+      text: 'What hashtags would you like to use? (comma-separated)',
+      examples: [
+        'Example: #tech, #innovation, #future',
+        'Example: #startup, #entrepreneurship, #business',
+        'Example: #marketing, #growth, #strategy'
       ]
     }
   },
-  'LinkedIn': {
-    text: 'What would you like to share on LinkedIn?',
-    examples: [
-      'Example: Professional achievement or milestone',
-      'Example: Industry insights and analysis',
-      'Example: Company culture and team highlights'
-    ],
-    hashtags: {
-      text: 'Enter your LinkedIn hashtags (separated by commas):',
+  LinkedIn: {
+    topic: {
+      text: 'What would you like to share on LinkedIn?',
       examples: [
-        'Example: #Leadership, #ProfessionalDevelopment, #Innovation',
-        'Use industry-specific and professional hashtags',
-        'Tip: 3-5 relevant hashtags for professional context'
+        'Example: Professional achievement',
+        'Example: Industry analysis',
+        'Example: Company milestone'
+      ]
+    },
+    title: {
+      text: 'Select a post style:',
+      examples: [
+        'Example: Professional insight',
+        'Example: Success story',
+        'Example: Industry trend analysis'
+      ]
+    },
+    hashtags: {
+      text: 'What hashtags would you like to use? (comma-separated)',
+      examples: [
+        'Example: #leadership, #professionaldevelopment, #career',
+        'Example: #business, #innovation, #technology',
+        'Example: #networking, #jobsearch, #recruitment'
       ]
     }
   },
-  'Facebook': {
-    text: 'What would you like to post on Facebook?',
-    examples: [
-      'Example: Company update or announcement',
-      'Example: Customer success story',
-      'Example: Community engagement post'
-    ],
-    hashtags: {
-      text: 'Enter your Facebook hashtags (separated by commas):',
+  Facebook: {
+    topic: {
+      text: 'What would you like to share on Facebook?',
       examples: [
-        'Example: #SmallBusiness, #LocalBusiness, #CommunityFirst',
-        'Use branded and campaign-specific hashtags',
-        'Tip: 2-3 targeted hashtags for better reach'
+        'Example: Community update',
+        'Example: Event announcement',
+        'Example: Customer success story'
+      ]
+    },
+    title: {
+      text: 'Select a post style:',
+      examples: [
+        'Example: Community-focused',
+        'Example: Informative and engaging',
+        'Example: Story-based content'
+      ]
+    },
+    hashtags: {
+      text: 'What hashtags would you like to use? (comma-separated)',
+      examples: [
+        'Example: #community, #events, #local',
+        'Example: #business, #smallbusiness, #support',
+        'Example: #customerservice, #feedback, #growth'
       ]
     }
   },
-  'Threads': {
-    text: 'What would you like to share on Threads?',
-    examples: [
-      'Example: Industry conversation starter',
-      'Example: Quick insights and observations',
-      'Example: Engaging with current trends'
-    ],
-    hashtags: {
-      text: 'Enter your Threads hashtags (separated by commas):',
+  Pinterest: {
+    topic: {
+      text: 'What would you like to share on Pinterest?',
       examples: [
-        'Example: #TechTalk, #CreatorEconomy, #FutureOfWork',
-        'Mix trending and niche conversation hashtags',
-        'Tip: 3-4 hashtags to join relevant conversations'
+        'Example: Visual inspiration',
+        'Example: DIY tutorial',
+        'Example: Product showcase'
+      ]
+    },
+    title: {
+      text: 'Select a pin style:',
+      examples: [
+        'Example: Inspirational and creative',
+        'Example: Step-by-step guide',
+        'Example: Product highlight'
+      ]
+    },
+    hashtags: {
+      text: 'What hashtags would you like to use? (comma-separated)',
+      examples: [
+        'Example: #inspiration, #design, #creative',
+        'Example: #diy, #howto, #tutorial',
+        'Example: #style, #decor, #lifestyle'
       ]
     }
   },
-  'Pinterest': {
-    text: 'What would you like to pin on Pinterest?',
-    examples: [
-      'Example: Visual guide or infographic',
-      'Example: Inspirational design showcase',
-      'Example: Step-by-step tutorial with images'
-    ]
+  Threads: {
+    topic: {
+      text: 'What would you like to share on Threads?',
+      examples: [
+        'Example: Quick update',
+        'Example: Conversation starter',
+        'Example: Industry insight'
+      ]
+    },
+    title: {
+      text: 'Select a thread style:',
+      examples: [
+        'Example: Conversational and engaging',
+        'Example: Quick insights',
+        'Example: Discussion prompt'
+      ]
+    },
+    hashtags: {
+      text: 'What hashtags would you like to use? (comma-separated)',
+      examples: [
+        'Example: #discussion, #community, #conversation',
+        'Example: #insights, #thoughts, #ideas',
+        'Example: #trending, #news, #updates'
+      ]
+    }
   },
-  'YouTube': {
-    text: 'What type of video would you like to create?',
-    examples: [
-      'Example: In-depth tutorial (10-15 minutes)',
-      'Example: Product review and demonstration',
-      'Example: Expert interview or discussion'
-    ]
+  YouTube: {
+    topic: {
+      text: 'What would you like to share on YouTube?',
+      examples: [
+        'Example: Tutorial video',
+        'Example: Product review',
+        'Example: Behind-the-scenes'
+      ]
+    },
+    title: {
+      text: 'Select a video style:',
+      examples: [
+        'Example: Educational content',
+        'Example: Entertainment focus',
+        'Example: Brand storytelling'
+      ]
+    },
+    hashtags: {
+      text: 'What hashtags would you like to use? (comma-separated)',
+      examples: [
+        'Example: #tutorial, #howto, #education',
+        'Example: #review, #unboxing, #product',
+        'Example: #vlog, #behindthescenes, #creator'
+      ]
+    }
   },
-  'TikTok': {
-    text: 'What type of TikTok would you like to create?',
-    examples: [
-      'Example: Quick tip or life hack (30-60 seconds)',
-      'Example: Behind-the-scenes glimpse',
-      'Example: Trending challenge participation'
-    ]
+  TikTok: {
+    topic: {
+      text: 'What would you like to share on TikTok?',
+      examples: [
+        'Example: Educational content',
+        'Example: Trending challenge',
+        'Example: Brand personality showcase'
+      ]
+    },
+    title: {
+      text: 'Select a video style:',
+      examples: [
+        'Example: Entertaining and engaging',
+        'Example: Quick tips and tricks',
+        'Example: Trending format'
+      ]
+    },
+    hashtags: {
+      text: 'What hashtags would you like to use? (comma-separated)',
+      examples: [
+        'Example: #fyp, #viral, #trending',
+        'Example: #learn, #tips, #howto',
+        'Example: #business, #creator, #community'
+      ]
+    }
   },
-  'Explainer': {
+  Explainer: {
     text: 'What would you like to explain in your video?',
     examples: [
       'Example: Product features and benefits',
@@ -218,53 +329,160 @@ export const defaultPrompts: PromptConfig = {
   }
 };
 
-export const contentTypePrompts: Record<string, ChatPrompt> = {
+export const contentTypePrompts: Record<ContentType, ChatPrompt> = {
   'Blog Post': {
-    text: 'Tell me about your topic:',
+    text: 'What topic would you like to write about?',
     examples: [
       'Example: Digital marketing trends for small businesses',
-      'Example: Sustainable living tips for urban dwellers',
-      'Example: Beginner\'s guide to cryptocurrency investing'
+      'Example: Sustainable living tips for beginners',
+      'Example: Cryptocurrency investing guide for newcomers'
     ]
   },
   'Landing Page': {
-    text: 'What is the primary purpose of this landing page?',
+    text: 'What product, service, or offer would you like to create a landing page for?',
     examples: [
-      'Example: Convert visitors to trial signups',
-      'Example: Promote new product launch',
-      'Example: Generate service inquiries'
+      'Example: SaaS product that automates social media scheduling',
+      'Example: Free consultation for business coaching services',
+      'Example: Early-bird access to an online course launch'
+    ],
+    tip: 'Tip: Be specific about your main offer and target audience'
+  },
+  'Social Media Post': {
+    text: 'What topic or message would you like to share on social media?',
+    examples: [
+      'Example: New product launch announcement',
+      'Example: Industry insights and tips',
+      'Example: Behind-the-scenes company culture'
+    ]
+  },
+  'Video Script': {
+    text: 'What topic would you like to create a video script about?',
+    examples: [
+      'Example: Product demonstration and features walkthrough',
+      'Example: Educational tutorial on industry best practices',
+      'Example: Company story and mission showcase'
     ]
   },
   'Service Page': {
-    text: 'What service would you like to promote?',
+    text: 'What service would you like to create a page for?',
     examples: [
-      'Example: Professional web design services',
-      'Example: Local plumbing and repair',
+      'Example: Professional photography services',
+      'Example: Web development and design packages',
       'Example: Business consulting solutions'
     ]
   },
   'Email Sequence': {
-    text: 'What is the goal of this email sequence?',
+    text: 'What type of email sequence would you like to create?',
     examples: [
-      'Example: Welcome and onboard new subscribers',
-      'Example: Launch a new product or service',
-      'Example: Re-engage inactive customers'
+      'Example: Welcome series for new subscribers',
+      'Example: Product launch campaign',
+      'Example: Customer onboarding sequence'
     ]
   },
   'Listicle': {
-    text: 'What topic would you like to create a list about?',
+    text: 'What topic would you like to create a listicle about?',
     examples: [
-      'Example: Top 10 productivity tools for remote teams',
-      'Example: 15 essential tips for first-time homebuyers',
-      'Example: 7 effective strategies for social media growth'
+      'Example: Top productivity tools for remote teams',
+      'Example: Best practices for content marketing',
+      'Example: Essential tips for home organization'
     ]
   },
   'Resource Guide': {
-    text: 'What topic would you like to create a comprehensive guide for?',
+    text: 'What topic would you like to create a resource guide for?',
     examples: [
       'Example: Complete guide to starting an online business',
-      'Example: Ultimate resource for home gardening',
-      'Example: Comprehensive guide to personal finance'
+      'Example: Ultimate resource list for learning web development',
+      'Example: Comprehensive guide to digital marketing tools'
     ]
+  }
+};
+
+export const PLATFORM_PROMPTS: Record<Platform, PlatformPrompt> = {
+  Instagram: {
+    topic: {
+      examples: [
+        'Share behind-the-scenes of our design process',
+        'New product launch with lifestyle photos',
+        'Customer success story with visuals',
+        'Industry tips with engaging graphics'
+      ],
+      text: 'What topic would you like to create an Instagram post about?'
+    },
+    title: {
+      examples: [
+        '✨ Transforming spaces, one design at a time',
+        '🎨 The art of minimal design: Less is more',
+        '🌟 Meet the team behind the magic',
+        '💡 5 design tips you need to know'
+      ],
+      text: 'What caption would you like for your Instagram post? (Include emojis for better engagement)'
+    },
+    hashtags: {
+      examples: [
+        '#interiordesign #homedecor #designinspo',
+        '#techstartup #innovation #futureofwork',
+        '#smallbusiness #entrepreneurlife #growth',
+        '#marketing #digitalstrategy #socialmedia'
+      ],
+      text: 'What are 3-5 main hashtags for your post? (I will generate additional relevant ones)'
+    }
+  },
+  'Twitter/X': {
+    topic: {
+      examples: [
+        'Share industry news with insights',
+        'Quick tip about our product',
+        'Customer testimonial highlight',
+        'Behind-the-scenes team moment'
+      ],
+      text: 'What topic would you like to create a Twitter post about?'
+    },
+    title: {
+      examples: [
+        'Breaking: Our latest feature just dropped! 🚀',
+        'Pro tip: Here\'s how to 10x your productivity ⚡️',
+        'We\'re thrilled to announce our newest partnership 🤝',
+        'Question for our community: What\'s your biggest challenge? 🤔'
+      ],
+      text: 'What would you like to tweet? (Remember 280 character limit)'
+    },
+    hashtags: {
+      examples: [
+        '#TechNews #Innovation',
+        '#StartupLife #Growth',
+        '#MarketingTips #DigitalMarketing',
+        '#ProductLaunch #Tech'
+      ],
+      text: 'What are 2-3 main hashtags for your tweet? (I will generate additional relevant ones)'
+    }
+  },
+  LinkedIn: {
+    topic: {
+      examples: [
+        'Share industry insights and analysis',
+        'Company milestone announcement',
+        'Team culture spotlight',
+        'Professional development tips'
+      ],
+      text: 'What topic would you like to create a LinkedIn post about?'
+    },
+    title: {
+      examples: [
+        'Excited to share our latest industry report on the future of work 📊',
+        'Proud to announce: We\'ve hit a major milestone! 🎉',
+        'Three key insights from our recent client success 💡',
+        'Leadership lesson: Building high-performing teams starts with... 🚀'
+      ],
+      text: 'What would you like to share on LinkedIn? (Professional but engaging)'
+    },
+    hashtags: {
+      examples: [
+        '#Leadership #ProfessionalDevelopment',
+        '#BusinessStrategy #Innovation',
+        '#CompanyCulture #FutureOfWork',
+        '#IndustryInsights #Growth'
+      ],
+      text: 'What are 2-3 main hashtags for your post? (I will generate additional relevant ones)'
+    }
   }
 };

@@ -1,10 +1,15 @@
 import { ContentHandler } from './ContentHandler';
-import { defaultPrompts } from '../configs/prompts';
+import { defaultPrompts, contentTypePrompts } from '../configs/prompts';
 import type { Step, ContentState } from '../../../lib/store';
 import type { ChatPrompt } from '../configs/prompts';
 
-export class BlogPostHandler implements ContentHandler {
+export class LandingPageHandler implements ContentHandler {
   getPrompt(step: Step): ChatPrompt {
+    // Use landing page specific prompt for the topic step
+    if (step === 'topic' && contentTypePrompts['Landing Page']) {
+      return contentTypePrompts['Landing Page'];
+    }
+    
     const prompt = defaultPrompts[step];
     if (!prompt) {
       return {
@@ -20,7 +25,7 @@ export class BlogPostHandler implements ContentHandler {
       case 'topic':
         return {
           isValid: input.length >= 10,
-          error: 'Please provide a more detailed topic description'
+          error: 'Please provide more details about your landing page offer'
         };
       case 'keywords':
         const keywords = input.split(',').map(k => k.trim()).filter(Boolean);
@@ -66,7 +71,6 @@ export class BlogPostHandler implements ContentHandler {
           break;
 
         case 'lsi':
-          // After LSI keywords are selected, generate the outline
           await generateOutline();
           setStep('outline');
           break;
@@ -76,4 +80,4 @@ export class BlogPostHandler implements ContentHandler {
       throw error;
     }
   }
-}
+} 

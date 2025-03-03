@@ -25,7 +25,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-sonar-small-128k-online',
+        model: 'sonar',
         messages: [
           {
             role: 'system',
@@ -38,15 +38,40 @@ serve(async (req) => {
                      Do not include any "Buy" links or product recommendations.
                      Focus on providing valuable, informative content.
                      
+                     CRITICAL REQUIREMENTS FOR ALL CONTENT TYPES:
+                     - NEVER include citation footnotes like [1], [2], etc.
+                     - NEVER add references or bibliography sections
+                     - ALL URLs must be complete and readable (e.g., "https://example.com/page" NOT just "example.com")
+                     - URLs must be real, accessible, and relevant
+                     - Do not use placeholder URLs like "example.com" or "[URL]"
+                     - Do not add any markdown formatting
+                     - Do not add any additional HTML elements not specified in the instructions
+                     
+                     For tables:
+                     - Use div with class="table-container"
+                     - Use h3 tag for the table title
+                     - Use proper table structure with thead and tbody
+                     - Include appropriate column headers in th tags
+                     - IMPORTANT: Include ALL relevant data from the content - do not limit the number of rows
+                     - If the content contains a list of items, each item should be a row in the table
+                     - If the content contains multiple sections, create appropriate columns to organize the data
+                     - Table content must directly relate to the content
+                     - Keep cell content concise and informative
+                     - No additional styling or classes
+                     
                      For statistics:
                      - Always include the topic in the h2 title
                      - Format h3 headings as "[Number][Unit] [Context]" (e.g., "75% Energy Savings with LED Bulbs")
                      - Keep descriptions concise and focused on impact
+                     - Use real statistics with proper attribution
+                     - Do not make up statistics
                      
                      For FAQs:
                      - Use h2 for section title
                      - Use h3 for questions
                      - Use p for answers
+                     - Questions should be clear and directly related to the content
+                     - Answers should be informative and concise
                      - No additional styling or classes
 
                      For related links:
@@ -54,9 +79,10 @@ serve(async (req) => {
                      - Each link must have three parts:
                        1. A p tag with relevant text being referenced
                        2. A p tag with the source name
-                       3. An a tag with href and nested p for the URL
-                     - Links must be real, accessible URLs
+                       3. An a tag with href and nested p for the FULL URL (e.g., "https://example.com/page")
+                     - Links must be real, accessible URLs with complete http:// or https:// prefix
                      - Links must directly relate to the content or selected text
+                     - The URL text inside the <p> tag must be the complete URL, not just the domain
                      - No additional styling or classes
 
                      For quotes:
@@ -64,7 +90,8 @@ serve(async (req) => {
                      - Quote text must be in quotation marks
                      - Use <cite> tag with nested <a> tag for attribution
                      - Include source name and year
-                     - Use real, accessible URLs
+                     - Use real, accessible URLs with complete http:// or https:// prefix
+                     - The URL in the href attribute must be complete (e.g., "https://example.com/page")
                      - No additional styling or markdown formatting
 
                      For CTAs:
@@ -130,7 +157,7 @@ serve(async (req) => {
                      Generate the content following these instructions exactly.`
           }
         ],
-        max_tokens: 2000,
+        max_tokens: 4000,
         temperature: 0.7,
       }),
     })
@@ -146,6 +173,10 @@ serve(async (req) => {
     const cleanContent = generatedContent
       .replace(/```html/g, '')
       .replace(/```/g, '')
+      .replace(/\[\d+\]/g, '') // Remove citation footnotes like [1], [2], etc.
+      .replace(/<br\s*\/?>\s*$/g, '') // Remove trailing <br> tags
+      .replace(/\s+$/gm, '') // Remove trailing whitespace
+      .replace(/\n+/g, '\n') // Normalize line breaks
       .trim()
 
     // Return the response with CORS headers

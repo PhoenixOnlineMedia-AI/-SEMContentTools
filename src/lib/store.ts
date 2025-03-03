@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from './supabase';
 import { generateContent, contentPrompts, type Platform } from './deepseek';
 import { plans, type PlanId } from './plans';
+import { ServicePageHandler } from '../components/chat/handlers/ServicePageHandler';
 
 interface UsageInfo {
   contentCount: number;
@@ -13,7 +14,7 @@ interface UsageInfo {
 // Add new types for outline structure
 export interface OutlineItem {
   id: string;
-  type: 'h1' | 'h2' | 'h3' | 'list' | 'cta';
+  type: 'h1' | 'h2' | 'h3' | 'list' | 'cta' | 'metadata';
   content: string;
   items?: string[];
 }
@@ -42,13 +43,16 @@ export type Step =
   | 'platform'
   | 'hashtags'
   | 'email-count'
-  | 'target-audience';
+  | 'target-audience'
+  | 'business-name'
+  | 'service-area'
+  | 'company-name';
 
 export const contentTypeSteps: Record<ContentType, Step[]> = {
   'Blog Post': ['topic', 'title', 'keywords', 'lsi', 'outline', 'content'],
-  'Service Page': ['topic', 'location-toggle', 'service-location', 'local-keywords', 'title', 'content'],
-  'Social Media Post': ['platform', 'topic', 'hashtags', 'lsi', 'content'],
-  'Email Sequence': ['topic', 'email-count', 'target-audience', 'title', 'content'],
+  'Service Page': ['topic', 'business-name', 'location-toggle', 'service-location', 'service-area', 'target-audience', 'keywords', 'lsi', 'title', 'outline', 'content'],
+  'Social Media Post': ['platform', 'topic', 'title', 'hashtags', 'lsi', 'outline', 'content'],
+  'Email Sequence': ['topic', 'email-count', 'company-name', 'target-audience', 'title', 'outline', 'content'],
   'Landing Page': ['topic', 'title', 'keywords', 'lsi', 'outline', 'content'],
   'Video Script': ['platform', 'topic', 'title', 'outline', 'content'],
   'Listicle': ['topic', 'title', 'keywords', 'lsi', 'outline', 'content'],
@@ -99,7 +103,7 @@ export interface ContentState {
 
   checkUsageLimit: () => Promise<boolean>;
   incrementUsage: () => Promise<void>;
-  generateTitleSuggestions: () => Promise<void>;
+  generateTitleSuggestions: (metadata?: any) => Promise<void>;
   generateLSIKeywords: (keywords: string[]) => Promise<void>;
   generateOutline: () => Promise<void>;
   generateDraftContent: () => Promise<void>;
@@ -146,7 +150,37 @@ export const useContentStore = create<ContentState>((set, get) => ({
   targetAudience: '',
 
   // Setters
-  setStep: (step) => set({ step }),
+  setStep: (step) => {
+    console.log('Setting step:', {
+      newStep: step,
+      currentState: get()
+    });
+    
+    set((state) => {
+      // Clear error when changing steps
+      const updates: Partial<ContentState> = { step, error: null };
+      
+      // Reset specific state based on step changes
+      if (step === 'type') {
+        updates.contentType = '' as ContentType | '';
+        updates.platform = '';
+        updates.topic = '';
+        updates.title = '';
+        updates.keywords = [];
+        updates.lsiKeywords = [];
+        updates.selectedKeywords = [];
+        updates.outline = [];
+        updates.content = '';
+      }
+      
+      // Clear input-related state when moving to a new input step
+      if (['topic', 'title', 'hashtags'].includes(step)) {
+        updates.error = null;
+      }
+      
+      return { ...state, ...updates };
+    });
+  },
   setContentType: (type) => {
     if (type === '') {
       set({
@@ -228,8 +262,8 @@ export const useContentStore = create<ContentState>((set, get) => ({
     // Log the state after update
     const newState = get();
     console.log('Store state after selected keywords update:', {
-      selectedKeywords: newState.selectedKeywords,
       keywords: newState.keywords,
+      selectedKeywords: newState.selectedKeywords,
       hasContent: !!newState.content,
       contentLength: newState.content.length
     });
@@ -438,14 +472,14 @@ export const useContentStore = create<ContentState>((set, get) => ({
     }
   },
 
-  generateTitleSuggestions: async () => {
+  generateTitleSuggestions: async (metadata?: any) => {
     const { contentType, topic, platform } = get();
     
     try {
       set({ isLoading: true, error: null });
       
       const response = await generateContent([
-        contentPrompts.generateTitle(contentType, topic, platform as Platform)
+        contentPrompts.generateTitle(contentType, topic, platform as Platform, metadata)
       ]);
 
       if (!response.content) {
@@ -485,11 +519,34 @@ export const useContentStore = create<ContentState>((set, get) => ({
       }
 
       // Parse the comma-separated response
-      const lsiKeywords = response.content
+      // First, clean the response to ensure we only get keywords
+      let cleanedResponse = response.content;
+      
+      // Remove any headers or explanations that might be present
+      if (cleanedResponse.includes('\n')) {
+        // If there are multiple lines, look for a line that appears to be a comma-separated list
+        const lines = cleanedResponse.split('\n');
+        for (const line of lines) {
+          if (line.includes(',') && !line.startsWith('#') && !line.startsWith('-')) {
+            cleanedResponse = line;
+            break;
+          }
+        }
+      }
+      
+      // Extract just the comma-separated list if there's additional text
+      const commaListMatch = cleanedResponse.match(/([^,.]+(?:,[^,.]+)+)/);
+      if (commaListMatch) {
+        cleanedResponse = commaListMatch[0];
+      }
+      
+      const lsiKeywords = cleanedResponse
         .split(',')
         .map(k => k.trim())
-        .filter(Boolean);
+        .filter(Boolean)
+        .slice(0, 15); // Ensure we only take up to 15 keywords
 
+      console.log('Parsed LSI keywords:', lsiKeywords);
       set({ lsiKeywords, isLoading: false });
     } catch (error: any) {
       console.error('Error generating LSI keywords:', error);
@@ -502,10 +559,19 @@ export const useContentStore = create<ContentState>((set, get) => ({
   },
 
   generateOutline: async () => {
-    const { contentType, topic, title, platform } = get();
+    const { contentType, topic, title, platform, outline } = get();
     
     try {
       set({ isLoading: true, error: null });
+      
+      // For service pages, use the metadata from the outline
+      if (contentType === 'Service Page' && outline[0]?.type === 'metadata') {
+        const metadata = JSON.parse(outline[0].content);
+        const handler = new ServicePageHandler();
+        const locationBasedOutline = handler.generateLocationBasedOutline(metadata);
+        set({ outline: locationBasedOutline, isLoading: false });
+        return;
+      }
       
       const response = await generateContent([
         contentPrompts.generateOutline(contentType, topic, title, platform as Platform)
@@ -515,110 +581,58 @@ export const useContentStore = create<ContentState>((set, get) => ({
         throw new Error('Failed to generate outline');
       }
 
-      if (contentType === 'Social Media Post') {
-        try {
-          // Parse the JSON structure for social media posts
-          const jsonOutline = JSON.parse(response.content);
-          const outline: OutlineItem[] = [
-            {
-              id: crypto.randomUUID(),
-              type: 'h1',
-              content: jsonOutline.structure.hook
-            },
-            {
-              id: crypto.randomUUID(),
-              type: 'h2',
-              content: jsonOutline.structure.body
-            },
-            {
-              id: crypto.randomUUID(),
-              type: 'list',
-              content: 'Key Points',
-              items: Array.isArray(jsonOutline.structure.details) 
-                ? jsonOutline.structure.details 
-                : jsonOutline.structure.details.split('\n')
-            },
-            {
-              id: crypto.randomUUID(),
-              type: 'cta',
-              content: jsonOutline.structure.cta
-            },
-            {
-              id: crypto.randomUUID(),
-              type: 'list',
-              content: 'Media References',
-              items: Array.isArray(jsonOutline.structure.media)
-                ? jsonOutline.structure.media
-                : [jsonOutline.structure.media]
-            },
-            {
-              id: crypto.randomUUID(),
-              type: 'h2',
-              content: jsonOutline.structure.hashtags
+      // Use the same parsing logic for all content types since they now use the same format
+      const sections = response.content
+        .split(/\[H1\]/)
+        .filter(Boolean)
+        .map(section => {
+          const lines = section.trim().split('\n').filter(Boolean);
+          const mainTitle = lines[0].trim();
+          const outline: OutlineItem[] = [{
+            id: crypto.randomUUID(),
+            type: 'h1',
+            content: mainTitle
+          }];
+
+          let currentItem: OutlineItem | null = null;
+
+          lines.slice(1).forEach(line => {
+            if (line.startsWith('[H2]')) {
+              const item: OutlineItem = {
+                id: crypto.randomUUID(),
+                type: 'h2',
+                content: line.replace('[H2]', '').trim()
+              };
+              outline.push(item);
+              currentItem = item;
+            } else if (line.startsWith('[LIST]')) {
+              const item: OutlineItem = {
+                id: crypto.randomUUID(),
+                type: 'list',
+                content: 'List Items',
+                items: []
+              };
+              outline.push(item);
+              currentItem = item;
+            } else if (line.startsWith('[CTA]')) {
+              const item: OutlineItem = {
+                id: crypto.randomUUID(),
+                type: 'cta',
+                content: line.replace('[CTA]', '').trim()
+              };
+              outline.push(item);
+              currentItem = item;
+            } else if (line.startsWith('-') && currentItem?.type === 'list') {
+              currentItem.items = currentItem.items || [];
+              currentItem.items.push(line.replace('-', '').trim());
             }
-          ];
-          set({ outline, isLoading: false });
-        } catch (error) {
-          console.error('Error parsing social media outline:', error);
-          set({ 
-            error: 'Failed to parse social media outline',
-            isLoading: false 
           });
-        }
-      } else {
-        // Existing outline parsing logic for other content types
-        const sections = response.content
-          .split(/\[H1\]/)
-          .filter(Boolean)
-          .map(section => {
-            const lines = section.trim().split('\n').filter(Boolean);
-            const mainTitle = lines[0].trim();
-            const outline: OutlineItem[] = [{
-              id: crypto.randomUUID(),
-              type: 'h1',
-              content: mainTitle
-            }];
 
-            let currentItem: OutlineItem | null = null;
+          return outline;
+        })
+        .flat();
 
-            lines.slice(1).forEach(line => {
-              if (line.startsWith('[H2]')) {
-                const item: OutlineItem = {
-                  id: crypto.randomUUID(),
-                  type: 'h2',
-                  content: line.replace('[H2]', '').trim()
-                };
-                outline.push(item);
-                currentItem = item;
-              } else if (line.startsWith('[LIST]')) {
-                const item: OutlineItem = {
-                  id: crypto.randomUUID(),
-                  type: 'list',
-                  content: 'List Items',
-                  items: []
-                };
-                outline.push(item);
-                currentItem = item;
-              } else if (line.startsWith('[CTA]')) {
-                const item: OutlineItem = {
-                  id: crypto.randomUUID(),
-                  type: 'cta',
-                  content: line.replace('[CTA]', '').trim()
-                };
-                outline.push(item);
-                currentItem = item;
-              } else if (line.startsWith('-') && currentItem?.type === 'list') {
-                currentItem.items = currentItem.items || [];
-                currentItem.items.push(line.replace('-', '').trim());
-              }
-            });
-
-            return outline;
-          })
-          .flat();
-
-        set({ outline: sections, isLoading: false });
-      }
+      set({ outline: sections, isLoading: false });
     } catch (error: any) {
       console.error('Error generating outline:', error);
       set({ 
@@ -683,6 +697,8 @@ CRITICAL FORMAT REQUIREMENTS:
 - Do not add extra divs or line breaks
 - Do not include any styling or classes
 - Do not include any scripts or external resources
+- DO NOT use markdown code fence markers (like \`\`\`html or \`\`\`)
+- Return content directly as clean HTML without any wrappers or markers
 - Format should be clean, semantic HTML only`;
 
       const response = await generateContent([
@@ -695,6 +711,9 @@ CRITICAL FORMAT REQUIREMENTS:
 
       // Clean up the response
       const cleanContent = response.content
+        // Remove code fence markers
+        .replace(/```html/g, '')
+        .replace(/```/g, '')
         // Remove any escaped HTML entities
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')

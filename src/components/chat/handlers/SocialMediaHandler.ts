@@ -21,7 +21,7 @@ export class SocialMediaHandler implements ContentHandler {
       };
     }
 
-    // Use platform-specific prompts for the topic step
+    // Use platform-specific prompts for the topic and title steps
     if (step === 'topic' && this._platform) {
       const platformPrompt = platformPrompts[this._platform as Platform];
       if (platformPrompt) {
@@ -31,30 +31,24 @@ export class SocialMediaHandler implements ContentHandler {
 
     if (step === 'title') {
       return {
-        text: `Enter your ${this._platform} post caption (supports emojis):`,
+        text: `Create your ${this._platform} post caption:`,
         examples: [
-          'Tip: Start with a hook or engaging question',
-          'Tip: Include a clear call-to-action',
-          'Tip: Add relevant emojis sparingly',
+          'Start with a hook or engaging question',
+          'Include relevant emojis strategically',
+          'Add a clear call-to-action',
           `Note: Maximum ${PLATFORM_LIMITS[this._platform]?.chars || 280} characters`
         ]
       };
     }
 
-    // Use platform-specific hashtag prompts
-    if (step === 'hashtags' && this._platform) {
-      const platformPrompt = platformPrompts[this._platform as Platform];
-      if (platformPrompt?.hashtags) {
-        return platformPrompt.hashtags;
-      }
-      // Fallback to default hashtag prompt with platform-specific limits
+    if (step === 'hashtags') {
       return {
-        text: `Enter your hashtags for ${this._platform} (separated by commas):`,
+        text: `Enter your ${this._platform} hashtags (separated by commas):`,
         examples: [
-          `Maximum ${PLATFORM_LIMITS[this._platform]?.hashtags || 5} hashtags allowed`,
-          'Mix trending and niche hashtags for better reach',
-          'Include relevant industry and brand hashtags',
-          'Example: #YourBrand, #IndustryTrend, #SpecificCampaign'
+          'Example: #marketing, #socialmedia, #business',
+          'Example: #tech, #innovation, #startup',
+          `Note: Maximum ${PLATFORM_LIMITS[this._platform]?.hashtags || 5} hashtags allowed`,
+          'Tip: Mix trending and niche hashtags for better reach'
         ]
       };
     }
@@ -73,12 +67,13 @@ export class SocialMediaHandler implements ContentHandler {
 
     if (step === 'outline') {
       return {
-        text: 'Review and customize your post structure:',
+        text: `Structure your ${this._platform} post:`,
         examples: [
-          `Platform: ${this._platform}`,
-          'Tip: Add media references (e.g., [IMAGE 1: Product shot])',
-          'Tip: Include CTA placement markers',
-          'Tip: Arrange hashtags strategically'
+          'Hook/Opening line',
+          'Main message or value proposition',
+          'Supporting points or details',
+          'Call-to-action',
+          'Hashtag placement'
         ]
       };
     }
@@ -124,15 +119,14 @@ export class SocialMediaHandler implements ContentHandler {
 
   async processInput(step: Step, input: string, store: ContentState): Promise<void> {
     const {
+      setStep,
+      setError,
       setTopic,
       setTitle,
       setKeywords,
-      generateTitleSuggestions,
       generateLSIKeywords,
       generateOutline,
-      generateDraftContent,
-      setStep,
-      setError
+      generateDraftContent
     } = store;
 
     try {
@@ -141,28 +135,34 @@ export class SocialMediaHandler implements ContentHandler {
           store.setPlatform(input as Platform);
           setStep('topic');
           break;
+
         case 'topic':
           setTopic(input);
-          await generateTitleSuggestions();
+          await store.generateTitleSuggestions();
           setStep('title');
           break;
+
         case 'title':
           setTitle(input);
           setStep('hashtags');
           break;
+
         case 'hashtags':
-          // Format hashtags and handle LSI generation
-          const hashtagList = input.split(',').map(h => h.trim()).filter(Boolean);
-          const formattedHashtags = formatHashtags(hashtagList);
-          setKeywords(formattedHashtags);
-          // Generate LSI hashtags based on the initial hashtags
-          await generateLSIKeywords(formattedHashtags);
+          const hashtagList = input.split(',')
+            .map(h => h.trim())
+            .filter(Boolean)
+            .map(h => h.startsWith('#') ? h : `#${h}`);
+          
+          setKeywords(hashtagList);
+          await generateLSIKeywords(hashtagList);
           setStep('lsi');
           break;
+
         case 'lsi':
           await generateOutline();
           setStep('outline');
           break;
+
         case 'outline':
           await generateDraftContent();
           setStep('content');

@@ -30,7 +30,41 @@ export function InsertMenu({ editorRef, onInsert }: InsertMenuProps) {
 
   const getTypeInstructions = (type: string) => {
     const instructions = {
-      'table': `Create an HTML table with proper headers and rows based on the content. Format it with clean borders and padding.`,
+      'table': `Create an HTML table following this EXACT HTML structure with no deviations or additional styling:
+
+<div class="table-container">
+  <h3>[Descriptive Table Title]</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>[Column 1 Header]</th>
+        <th>[Column 2 Header]</th>
+        <th>[Column 3 Header]</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>[Row 1, Column 1 Data]</td>
+        <td>[Row 1, Column 2 Data]</td>
+        <td>[Row 1, Column 3 Data]</td>
+      </tr>
+      <!-- Additional rows as needed -->
+    </tbody>
+  </table>
+</div>
+
+Requirements:
+- Use EXACTLY the HTML structure shown above
+- The div MUST have class="table-container"
+- The table title MUST be an <h3> tag
+- Include appropriate column headers in <th> tags
+- IMPORTANT: Include ALL relevant data from the content - do not limit the number of rows
+- If the content contains a list of items, each item should be a row in the table
+- If the content contains multiple sections, create appropriate columns to organize the data
+- Table content must directly relate to the selected text or overall content
+- Keep cell content concise and informative
+- Do not add any CSS, styling, or additional HTML
+- Do not include any line breaks or <br> tags at the end`,
       'faq': `Generate a FAQ section following this EXACT HTML structure with no deviations or additional styling:
 
 <div class="faq-section">

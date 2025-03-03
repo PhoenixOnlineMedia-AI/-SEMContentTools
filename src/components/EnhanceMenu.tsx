@@ -120,6 +120,16 @@ Requirements:
     // Get the selected range
     const range = selection.getRangeAt(0);
     
+    // Check if the selection is within the editor
+    if (!editorRef.current.contains(range.commonAncestorContainer)) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'fixed bottom-4 right-4 bg-yellow-500 text-white px-4 py-2 rounded shadow-lg z-50';
+      messageDiv.textContent = 'Selection must be within the editor';
+      document.body.appendChild(messageDiv);
+      setTimeout(() => document.body.removeChild(messageDiv), 3000);
+      return;
+    }
+    
     // Create a temporary element to get the HTML content
     const tempDiv = document.createElement('div');
     tempDiv.appendChild(range.cloneContents());
@@ -135,8 +145,13 @@ Requirements:
       return;
     }
 
+    // Save the selection for later use
+    const savedRange = range.cloneRange();
+
     setIsEnhancing(true);
     try {
+      console.log('Enhancing selected content:', selectedContent);
+      
       const { data, error } = await supabase.functions.invoke('enhance-content', {
         body: {
           type: type,
@@ -147,11 +162,15 @@ Requirements:
       if (error) throw error;
       if (!data?.content) throw new Error('No enhanced content received');
 
+      // Restore the selection
+      selection.removeAllRanges();
+      selection.addRange(savedRange);
+
       // Replace the selected content with the enhanced version
-      range.deleteContents();
-      const fragment = range.createContextualFragment(data.content);
-      range.insertNode(fragment);
-      range.collapse(false);
+      savedRange.deleteContents();
+      const fragment = savedRange.createContextualFragment(data.content);
+      savedRange.insertNode(fragment);
+      savedRange.collapse(false);
 
       // Call onEnhance callback if provided
       onEnhance?.();

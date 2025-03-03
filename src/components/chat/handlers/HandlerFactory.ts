@@ -5,6 +5,9 @@ import { ServicePageHandler } from './ServicePageHandler';
 import { EmailSequenceHandler } from './EmailSequenceHandler';
 import { SocialMediaHandler } from './SocialMediaHandler';
 import { VideoScriptHandler } from './VideoScriptHandler';
+import { LandingPageHandler } from './LandingPageHandler';
+import { ListicleHandler } from './ListicleHandler';
+import { ResourceGuideHandler } from './ResourceGuideHandler';
 
 export class HandlerFactory {
   private static handlers: Map<ContentType, ContentHandler> = new Map();
@@ -37,13 +40,13 @@ export class HandlerFactory {
         handler = new EmailSequenceHandler();
         break;
       case 'Landing Page':
-        handler = new BlogPostHandler(); // Uses same flow as blog post
+        handler = new LandingPageHandler();
         break;
       case 'Listicle':
-        handler = new BlogPostHandler(); // Uses same flow as blog post
+        handler = new ListicleHandler();
         break;
       case 'Resource Guide':
-        handler = new BlogPostHandler(); // Uses same flow as blog post
+        handler = new ResourceGuideHandler();
         break;
       default:
         throw new Error(`No handler found for content type: ${contentType}`);
