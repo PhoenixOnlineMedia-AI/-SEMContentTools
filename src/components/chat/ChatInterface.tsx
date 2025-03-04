@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Send } from 'lucide-react';
 import { useContentStore } from '../../lib/store';
-import { contentTypeConfigs } from './configs/contentTypes';
+import { contentTypeCards } from './configs/contentTypes';
 import { defaultPrompts } from './configs/prompts';
 import { UsageIndicator } from './ui/UsageIndicator';
 import { ContentTypeCard } from './ui/ContentTypeCard';
@@ -14,7 +14,10 @@ import { ServicePageHandler } from './handlers/ServicePageHandler';
 import { EmailSequenceHandler } from './handlers/EmailSequenceHandler';
 import { SocialMediaHandler } from './handlers/SocialMediaHandler';
 import { BlogPostHandler } from './handlers/BlogPostHandler';
+import { VideoScriptHandler } from './handlers/VideoScriptHandler';
 import type { ContentHandler } from './handlers/ContentHandler';
+import type { ContentTypeConfig } from './configs/contentTypes';
+import type { Platform } from '../../lib/deepseek';
 
 export function ChatInterface() {
   const [input, setInput] = useState('');
@@ -37,7 +40,7 @@ export function ChatInterface() {
     setStep,
     setError,
     usageInfo,
-    refreshUsageInfo,
+    checkUsageLimit,
     generateTitleSuggestions,
     generateOutline,
     generateDraftContent
@@ -52,6 +55,8 @@ export function ChatInterface() {
         return new EmailSequenceHandler();
       case 'Social Media Post':
         return new SocialMediaHandler(platform);
+      case 'Video Script':
+        return new VideoScriptHandler(platform);
       case 'Blog Post':
         return new BlogPostHandler();
       default:
@@ -81,7 +86,7 @@ export function ChatInterface() {
     }
   };
 
-  const handlePlatformSelect = async (selectedPlatform: string) => {
+  const handlePlatformSelect = async (selectedPlatform: Platform) => {
     setPlatform(selectedPlatform);
     setStep('topic');
   };
@@ -175,7 +180,7 @@ export function ChatInterface() {
         {/* Content Type Selection */}
         {step === 'type' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in">
-            {contentTypeConfigs.map((config) => (
+            {contentTypeCards.map((config: ContentTypeConfig) => (
               <ContentTypeCard
                 key={config.type}
                 config={config}
@@ -208,12 +213,12 @@ export function ChatInterface() {
             onChange={(e) => setInput(e.target.value)}
             className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
             placeholder={step === 'title' ? 'Enter your own title or select one above' : 'Type your message...'}
-            disabled={isLoading || step === 'outline' || step === 'lsi' || step === 'type' || step === 'platform' || step === 'location-toggle' || step === 'video-type'}
+            disabled={isLoading || step === 'outline' || step === 'lsi' || step === 'type' || step === 'platform' || step === 'location-toggle'}
           />
           <button
             type="submit"
             className="bg-blue-500 text-white rounded-lg px-4 py-2 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-colors duration-200"
-            disabled={!input.trim() || isLoading || step === 'outline' || step === 'lsi' || step === 'type' || step === 'platform' || step === 'location-toggle' || step === 'video-type'}
+            disabled={!input.trim() || isLoading || step === 'outline' || step === 'lsi' || step === 'type' || step === 'platform' || step === 'location-toggle'}
           >
             <Send className="w-5 h-5" />
           </button>
