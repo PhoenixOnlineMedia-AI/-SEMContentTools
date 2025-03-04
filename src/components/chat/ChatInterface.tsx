@@ -193,50 +193,51 @@ export function ChatInterface() {
 
         {/* Content Type Selection */}
         {step === 'type' && (
-          <div className="px-4 max-w-5xl mx-auto animate-fade-in">
-            {/* First row - 3 cards */}
-            <div className="flex flex-col md:flex-row gap-6 mb-6">
-              <div className="w-full md:w-1/3">
-                <ContentTypeCard
-                  config={contentTypeCards[0]}
-                  onClick={() => setContentType(contentTypeCards[0].type)}
-                />
-              </div>
-              <div className="w-full md:w-1/3">
-                <ContentTypeCard
-                  config={contentTypeCards[1]}
-                  onClick={() => setContentType(contentTypeCards[1].type)}
-                />
-              </div>
-              <div className="w-full md:w-1/3">
-                <ContentTypeCard
-                  config={contentTypeCards[2]}
-                  onClick={() => setContentType(contentTypeCards[2].type)}
-                />
-              </div>
-            </div>
-            
-            {/* Second row - 3 cards */}
-            <div className="flex flex-col md:flex-row gap-6">
-              <div className="w-full md:w-1/3">
-                <ContentTypeCard
-                  config={contentTypeCards[3]}
-                  onClick={() => setContentType(contentTypeCards[3].type)}
-                />
-              </div>
-              <div className="w-full md:w-1/3">
-                <ContentTypeCard
-                  config={contentTypeCards[4]}
-                  onClick={() => setContentType(contentTypeCards[4].type)}
-                />
-              </div>
-              <div className="w-full md:w-1/3">
-                <ContentTypeCard
-                  config={contentTypeCards[5]}
-                  onClick={() => setContentType(contentTypeCards[5].type)}
-                />
-              </div>
-            </div>
+          <div className="px-4 max-w-4xl mx-auto animate-fade-in">
+            <table className="w-full border-separate border-spacing-4">
+              <tbody>
+                <tr>
+                  <td className="w-1/3 p-0">
+                    <ContentTypeCard
+                      config={contentTypeCards[0]}
+                      onClick={() => setContentType(contentTypeCards[0].type)}
+                    />
+                  </td>
+                  <td className="w-1/3 p-0">
+                    <ContentTypeCard
+                      config={contentTypeCards[1]}
+                      onClick={() => setContentType(contentTypeCards[1].type)}
+                    />
+                  </td>
+                  <td className="w-1/3 p-0">
+                    <ContentTypeCard
+                      config={contentTypeCards[2]}
+                      onClick={() => setContentType(contentTypeCards[2].type)}
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td className="w-1/3 p-0">
+                    <ContentTypeCard
+                      config={contentTypeCards[3]}
+                      onClick={() => setContentType(contentTypeCards[3].type)}
+                    />
+                  </td>
+                  <td className="w-1/3 p-0">
+                    <ContentTypeCard
+                      config={contentTypeCards[4]}
+                      onClick={() => setContentType(contentTypeCards[4].type)}
+                    />
+                  </td>
+                  <td className="w-1/3 p-0">
+                    <ContentTypeCard
+                      config={contentTypeCards[5]}
+                      onClick={() => setContentType(contentTypeCards[5].type)}
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         )}
 
