@@ -2,12 +2,16 @@ import { ContentHandler } from './ContentHandler';
 import { PLATFORM_LIMITS } from '../configs/platforms';
 import { formatHashtags } from '../../../lib/hashtagUtils';
 import type { Step, ContentState } from '../../../lib/store';
-import type { Platform } from '../../../lib/deepseek';
+import type { Platform, SocialPlatform } from '../../../lib/deepseek';
 import type { ChatPrompt } from '../configs/prompts';
 import { defaultPrompts, platformPrompts } from '../configs/prompts';
 
 export class SocialMediaHandler implements ContentHandler {
   constructor(private _platform: string) {}
+
+  private get platform(): SocialPlatform {
+    return this._platform as SocialPlatform;
+  }
 
   getPrompt(step: Step): ChatPrompt {
     if (step === 'platform') {
@@ -21,33 +25,44 @@ export class SocialMediaHandler implements ContentHandler {
       };
     }
 
-    // Use platform-specific prompts for the topic and title steps
+    // Use platform-specific prompts for the topic step
     if (step === 'topic' && this._platform) {
-      const platformPrompt = platformPrompts[this._platform as Platform];
-      if (platformPrompt) {
-        return platformPrompt;
+      // Check if there's a platform-specific prompt
+      const platformSpecificPrompt = platformPrompts[this._platform as Platform]?.topic;
+      if (platformSpecificPrompt) {
+        return platformSpecificPrompt;
       }
     }
 
     if (step === 'title') {
+      const platformSpecificPrompt = platformPrompts[this._platform as Platform]?.title;
+      if (platformSpecificPrompt) {
+        return platformSpecificPrompt;
+      }
+      
       return {
         text: `Create your ${this._platform} post caption:`,
         examples: [
           'Start with a hook or engaging question',
           'Include relevant emojis strategically',
           'Add a clear call-to-action',
-          `Note: Maximum ${PLATFORM_LIMITS[this._platform]?.chars || 280} characters`
+          `Note: Maximum ${PLATFORM_LIMITS[this.platform]?.chars || 280} characters`
         ]
       };
     }
 
     if (step === 'hashtags') {
+      const platformSpecificPrompt = platformPrompts[this._platform as Platform]?.hashtags;
+      if (platformSpecificPrompt) {
+        return platformSpecificPrompt;
+      }
+      
       return {
         text: `Enter your ${this._platform} hashtags (separated by commas):`,
         examples: [
           'Example: #marketing, #socialmedia, #business',
           'Example: #tech, #innovation, #startup',
-          `Note: Maximum ${PLATFORM_LIMITS[this._platform]?.hashtags || 5} hashtags allowed`,
+          `Note: Maximum ${PLATFORM_LIMITS[this.platform]?.hashtags || 5} hashtags allowed`,
           'Tip: Mix trending and niche hashtags for better reach'
         ]
       };
@@ -60,7 +75,7 @@ export class SocialMediaHandler implements ContentHandler {
           'Choose hashtags that complement your main ones',
           'Mix popular and niche hashtags for better reach',
           'Consider trending hashtags in your industry',
-          `Maximum ${PLATFORM_LIMITS[this._platform]?.hashtags || 5} total hashtags`
+          `Maximum ${PLATFORM_LIMITS[this.platform]?.hashtags || 5} total hashtags`
         ]
       };
     }
@@ -88,10 +103,6 @@ export class SocialMediaHandler implements ContentHandler {
     return prompt;
   }
 
-  private get platform(): string {
-    return this._platform;
-  }
-
   validateInput(step: Step, input: string): { isValid: boolean; error?: string } {
     switch (step) {
       case 'topic':
@@ -100,7 +111,7 @@ export class SocialMediaHandler implements ContentHandler {
           error: 'Please provide a more detailed topic description'
         };
       case 'title':
-        const charLimit = PLATFORM_LIMITS[this._platform]?.chars || 280;
+        const charLimit = PLATFORM_LIMITS[this.platform]?.chars || 280;
         return {
           isValid: input.length <= charLimit,
           error: `Caption exceeds ${charLimit} character limit for ${this._platform}`
@@ -110,7 +121,7 @@ export class SocialMediaHandler implements ContentHandler {
         const maxHashtags = PLATFORM_LIMITS[this.platform]?.hashtags || 5;
         return {
           isValid: hashtags.length <= maxHashtags,
-          error: `Maximum ${maxHashtags} hashtags allowed for ${this.platform}`
+          error: `Maximum ${maxHashtags} hashtags allowed for ${this._platform}`
         };
       default:
         return { isValid: true };

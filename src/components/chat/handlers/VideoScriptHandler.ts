@@ -1,11 +1,9 @@
 import { ContentHandler } from './ContentHandler';
 import { VIDEO_LIMITS } from '../configs/platforms';
 import type { Step, ContentState } from '../../../lib/store';
-import type { Platform } from '../../../lib/deepseek';
+import type { Platform, VideoPlatform } from '../../../lib/deepseek';
 import type { ChatPrompt } from '../configs/prompts';
 import { defaultPrompts, platformPrompts, contentTypePrompts } from '../configs/prompts';
-
-type VideoPlatform = 'YouTube' | 'TikTok' | 'Explainer';
 
 export class VideoScriptHandler implements ContentHandler {
   constructor(private _platform: string) {}
@@ -26,7 +24,7 @@ export class VideoScriptHandler implements ContentHandler {
       };
     }
 
-    if (step === 'topic') {
+    if (step === 'topic' && this._platform) {
       const limits = VIDEO_LIMITS[this.platform];
       return {
         text: `What would you like to create a ${this.platform} video about?`,

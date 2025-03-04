@@ -87,8 +87,22 @@ export function ChatInterface() {
   };
 
   const handlePlatformSelect = async (selectedPlatform: Platform) => {
-    setPlatform(selectedPlatform);
-    setStep('topic');
+    try {
+      setPlatform(selectedPlatform);
+      
+      // Ensure we have the correct handler for the selected platform
+      const updatedHandler = contentType === 'Social Media Post' 
+        ? new SocialMediaHandler(selectedPlatform)
+        : contentType === 'Video Script'
+          ? new VideoScriptHandler(selectedPlatform)
+          : getHandler();
+      
+      // Process the platform selection
+      await updatedHandler.processInput('platform', selectedPlatform, store);
+    } catch (error: any) {
+      console.error('Error selecting platform:', error);
+      setError(error.message || 'An error occurred selecting the platform');
+    }
   };
 
   const handleTitleSelect = (selectedTitle: string) => {
