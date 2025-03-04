@@ -193,13 +193,14 @@ export function ChatInterface() {
 
         {/* Content Type Selection */}
         {step === 'type' && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 px-4 max-w-4xl mx-auto animate-fade-in">
+          <div className="flex flex-wrap justify-center gap-6 px-4 max-w-5xl mx-auto animate-fade-in">
             {contentTypeCards.map((config: ContentTypeConfig) => (
-              <ContentTypeCard
-                key={config.type}
-                config={config}
-                onClick={() => setContentType(config.type)}
-              />
+              <div key={config.type} className="w-full sm:w-[calc(33.333%-1rem)] flex-shrink-0 flex-grow-0">
+                <ContentTypeCard
+                  config={config}
+                  onClick={() => setContentType(config.type)}
+                />
+              </div>
             ))}
           </div>
         )}
