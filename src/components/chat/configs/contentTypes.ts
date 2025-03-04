@@ -10,6 +10,8 @@ export interface ContentTypeConfig {
   examples: string[];
 }
 
+// Note: Social Media Post and Video Script types are temporarily hidden from the UI
+// but their handlers and functionality are preserved for future use
 export const contentTypeCards: ContentTypeConfig[] = [
   {
     type: 'Blog Post',
@@ -20,17 +22,6 @@ export const contentTypeCards: ContentTypeConfig[] = [
       'How-to guides',
       'Industry insights',
       'Product comparisons'
-    ]
-  },
-  {
-    type: 'Social Media Post',
-    icon: Share2,
-    description: 'Platform-specific content for maximum engagement',
-    color: 'purple',
-    examples: [
-      'Instagram captions',
-      'LinkedIn articles',
-      'Twitter threads'
     ]
   },
   {
@@ -64,17 +55,6 @@ export const contentTypeCards: ContentTypeConfig[] = [
       'Welcome sequences',
       'Product launches',
       'Abandoned cart recovery'
-    ]
-  },
-  {
-    type: 'Video Script',
-    icon: Video,
-    description: 'Platform-optimized video content scripts',
-    color: 'red',
-    examples: [
-      'YouTube tutorials',
-      'TikTok shorts',
-      'Explainer videos'
     ]
   },
   {
