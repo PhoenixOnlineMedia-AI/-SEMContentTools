@@ -193,7 +193,7 @@ export function ChatInterface() {
 
         {/* Content Type Selection */}
         {step === 'type' && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-6 max-w-6xl mx-auto animate-fade-in">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 px-4 max-w-4xl mx-auto animate-fade-in">
             {contentTypeCards.map((config: ContentTypeConfig) => (
               <ContentTypeCard
                 key={config.type}
