@@ -193,15 +193,50 @@ export function ChatInterface() {
 
         {/* Content Type Selection */}
         {step === 'type' && (
-          <div className="flex flex-wrap justify-center gap-6 px-4 max-w-5xl mx-auto animate-fade-in">
-            {contentTypeCards.map((config: ContentTypeConfig) => (
-              <div key={config.type} className="w-full sm:w-[calc(33.333%-1rem)] flex-shrink-0 flex-grow-0">
+          <div className="px-4 max-w-5xl mx-auto animate-fade-in">
+            {/* First row - 3 cards */}
+            <div className="flex flex-col md:flex-row gap-6 mb-6">
+              <div className="w-full md:w-1/3">
                 <ContentTypeCard
-                  config={config}
-                  onClick={() => setContentType(config.type)}
+                  config={contentTypeCards[0]}
+                  onClick={() => setContentType(contentTypeCards[0].type)}
                 />
               </div>
-            ))}
+              <div className="w-full md:w-1/3">
+                <ContentTypeCard
+                  config={contentTypeCards[1]}
+                  onClick={() => setContentType(contentTypeCards[1].type)}
+                />
+              </div>
+              <div className="w-full md:w-1/3">
+                <ContentTypeCard
+                  config={contentTypeCards[2]}
+                  onClick={() => setContentType(contentTypeCards[2].type)}
+                />
+              </div>
+            </div>
+            
+            {/* Second row - 3 cards */}
+            <div className="flex flex-col md:flex-row gap-6">
+              <div className="w-full md:w-1/3">
+                <ContentTypeCard
+                  config={contentTypeCards[3]}
+                  onClick={() => setContentType(contentTypeCards[3].type)}
+                />
+              </div>
+              <div className="w-full md:w-1/3">
+                <ContentTypeCard
+                  config={contentTypeCards[4]}
+                  onClick={() => setContentType(contentTypeCards[4].type)}
+                />
+              </div>
+              <div className="w-full md:w-1/3">
+                <ContentTypeCard
+                  config={contentTypeCards[5]}
+                  onClick={() => setContentType(contentTypeCards[5].type)}
+                />
+              </div>
+            </div>
           </div>
         )}
 
