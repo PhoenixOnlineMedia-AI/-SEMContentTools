@@ -78,3 +78,6 @@ export const contentTypeConfigs: ContentTypeConfig[] = [
     ]
   }
 ];
+
+// Export contentTypeCards as an alias for contentTypeConfigs for backward compatibility
+export const contentTypeCards = contentTypeConfigs;
