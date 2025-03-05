@@ -53,8 +53,8 @@ serve(async (req) => {
         },
       ],
       mode: 'subscription',
-      success_url: `${new URL(req.url).origin}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${new URL(req.url).origin}/pricing`,
+      success_url: `${Deno.env.get('APP_URL') || 'https://app.semcontent.tools'}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${Deno.env.get('APP_URL') || 'https://app.semcontent.tools'}/pricing`,
       metadata: {
         user_id: customerId
       }

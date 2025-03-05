@@ -8,6 +8,7 @@ import { LoginPage } from './pages/LoginPage';
 import { SignUpPage } from './pages/SignUpPage';
 import { VerifyEmailPage } from './pages/VerifyEmailPage';
 import { VerifySuccessPage } from './pages/VerifySuccessPage';
+import { SubscriptionSuccessPage } from './pages/SubscriptionSuccessPage';
 import { ContentListPage } from './pages/ContentListPage';
 import { PricingPage } from './pages/PricingPage';
 import { AuthProvider, useAuth } from './components/AuthProvider';
@@ -54,6 +55,7 @@ function AppContent() {
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/verify-success" element={<VerifySuccessPage />} />
+        <Route path="/success" element={<SubscriptionSuccessPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route
           path="/content"
