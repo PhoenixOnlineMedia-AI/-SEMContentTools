@@ -1,18 +1,11 @@
-import { ContentHandler } from './ContentHandler';
+import { BaseContentHandler } from './ContentHandler';
 import { defaultPrompts } from '../configs/prompts';
 import type { Step, ContentState } from '../../../lib/store';
 import type { ChatPrompt } from '../configs/prompts';
 
-export class BlogPostHandler implements ContentHandler {
-  getPrompt(step: Step): ChatPrompt {
-    const prompt = defaultPrompts[step];
-    if (!prompt) {
-      return {
-        text: '',
-        examples: []
-      };
-    }
-    return prompt;
+export class BlogPostHandler extends BaseContentHandler {
+  constructor() {
+    super('Blog Post');
   }
 
   validateInput(step: Step, input: string): { isValid: boolean; error?: string } {
