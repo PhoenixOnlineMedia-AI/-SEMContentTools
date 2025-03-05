@@ -21,9 +21,11 @@ import {
 interface EnhanceMenuProps {
   editorRef: React.RefObject<HTMLDivElement>;
   onEnhance?: () => void;
+  showNotification?: (message: string) => void;
+  hideNotification?: () => void;
 }
 
-export function EnhanceMenu({ editorRef, onEnhance }: EnhanceMenuProps) {
+export function EnhanceMenu({ editorRef, onEnhance, showNotification, hideNotification }: EnhanceMenuProps) {
   const [isEnhancing, setIsEnhancing] = useState(false);
 
   const getEnhanceInstructions = (type: string) => {
@@ -149,6 +151,12 @@ Requirements:
     const savedRange = range.cloneRange();
 
     setIsEnhancing(true);
+    
+    // Show notification if available
+    if (showNotification) {
+      showNotification(`Enhancing text with ${type}...`);
+    }
+    
     try {
       console.log('Enhancing selected content:', selectedContent);
       
@@ -181,6 +189,13 @@ Requirements:
       messageDiv.textContent = 'Successfully enhanced content';
       document.body.appendChild(messageDiv);
       setTimeout(() => document.body.removeChild(messageDiv), 3000);
+      
+      // Hide notification if available
+      if (hideNotification) {
+        setTimeout(() => {
+          hideNotification();
+        }, 1000);
+      }
 
     } catch (error) {
       console.error('Error enhancing content:', error);
@@ -189,6 +204,11 @@ Requirements:
       messageDiv.textContent = error instanceof Error ? error.message : 'Failed to enhance content. Please try again.';
       document.body.appendChild(messageDiv);
       setTimeout(() => document.body.removeChild(messageDiv), 5000);
+      
+      // Hide notification if available
+      if (hideNotification) {
+        hideNotification();
+      }
     } finally {
       setIsEnhancing(false);
     }

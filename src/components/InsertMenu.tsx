@@ -23,9 +23,11 @@ import {
 interface InsertMenuProps {
   editorRef: React.RefObject<HTMLDivElement>;
   onInsert?: () => void;
+  showNotification?: (message: string) => void;
+  hideNotification?: () => void;
 }
 
-export function InsertMenu({ editorRef, onInsert }: InsertMenuProps) {
+export function InsertMenu({ editorRef, onInsert, showNotification, hideNotification }: InsertMenuProps) {
   const [isInserting, setIsInserting] = useState(false);
 
   const getTypeInstructions = (type: string) => {
@@ -278,6 +280,12 @@ Requirements:
     });
 
     setIsInserting(true);
+    
+    // Show notification if available
+    if (showNotification) {
+      showNotification(`Generating ${type}...`);
+    }
+    
     try {
       const { data, error } = await supabase.functions.invoke('insert-content', {
         body: {
@@ -339,6 +347,13 @@ Requirements:
         setTimeout(() => {
           document.body.removeChild(messageDiv);
         }, 3000);
+        
+        // Hide notification if available
+        if (hideNotification) {
+          setTimeout(() => {
+            hideNotification();
+          }, 1000);
+        }
       }
     } catch (error) {
       console.error('Error inserting content:', error);
@@ -348,11 +363,16 @@ Requirements:
       messageDiv.className = 'fixed bottom-4 right-4 bg-red-500 text-white px-4 py-2 rounded shadow-lg z-50';
       messageDiv.textContent = error instanceof Error ? error.message : 'Failed to insert content. Please try again.';
       document.body.appendChild(messageDiv);
-
-      // Remove the error message after 5 seconds
+      
+      // Remove the message after 5 seconds
       setTimeout(() => {
         document.body.removeChild(messageDiv);
       }, 5000);
+      
+      // Hide notification if available
+      if (hideNotification) {
+        hideNotification();
+      }
     } finally {
       setIsInserting(false);
     }

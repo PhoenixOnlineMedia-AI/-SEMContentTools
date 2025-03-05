@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Send } from 'lucide-react';
 import { useContentStore } from '../../lib/store';
 import { contentTypeConfigs } from './configs/contentTypes';
@@ -10,14 +10,15 @@ import { TitleSuggestions } from './ui/TitleSuggestions';
 import { KeywordSelector } from './ui/KeywordSelector';
 import { PlatformSelector } from './ui/PlatformSelector';
 import { OutlineDisplay } from './ui/OutlineDisplay';
-import { ServicePageHandler } from './handlers/ServicePageHandler';
-import { EmailSequenceHandler } from './handlers/EmailSequenceHandler';
-import { SocialMediaHandler } from './handlers/SocialMediaHandler';
 import { BlogPostHandler } from './handlers/BlogPostHandler';
 import type { ContentHandler } from './handlers/ContentHandler';
+import type { Platform } from '../../lib/deepseek';
+import { HandlerFactory } from './handlers/HandlerFactory';
 
 export function ChatInterface() {
   const [input, setInput] = useState('');
+  const [activeNotification, setActiveNotification] = useState<string | null>(null);
+  const notificationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const store = useContentStore();
   const {
     step,
@@ -37,26 +38,86 @@ export function ChatInterface() {
     setStep,
     setError,
     usageInfo,
-    refreshUsageInfo,
-    generateTitleSuggestions,
     generateOutline,
     generateDraftContent
   } = store;
 
+  // Test notification on component mount
+  useEffect(() => {
+    console.log('Testing notification system...');
+    setActiveNotification('Testing notification system...');
+    
+    // Hide after 5 seconds
+    const timer = setTimeout(() => {
+      setActiveNotification(null);
+    }, 5000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Function to show a notification
+  const showNotification = (message: string) => {
+    console.log('Showing notification:', message);
+    
+    // Clear any existing timer
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current);
+      notificationTimerRef.current = null;
+    }
+    
+    // Show the notification
+    setActiveNotification(message);
+  };
+
+  // Function to hide a notification
+  const hideNotification = () => {
+    console.log('Hiding notification');
+    
+    // Clear any existing timer
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current);
+      notificationTimerRef.current = null;
+    }
+    
+    // Hide the notification after a delay
+    notificationTimerRef.current = setTimeout(() => {
+      console.log('Actually hiding notification now');
+      setActiveNotification(null);
+      notificationTimerRef.current = null;
+    }, 1500);
+  };
+
+  // Monitor loading state changes
+  useEffect(() => {
+    console.log('isLoading changed:', isLoading, 'step:', step);
+    
+    if (isLoading) {
+      // Show appropriate notification based on current step
+      if (step === 'topic') {
+        showNotification('Generating title suggestions...');
+      } else if (step === 'keywords') {
+        showNotification('Generating LSI keywords...');
+      } else if (step === 'lsi') {
+        showNotification('Generating outline...');
+      } else if (step === 'outline') {
+        showNotification('Generating content...');
+      }
+    } else if (!isLoading && activeNotification) {
+      // Only hide notification if it's been visible for at least 1 second
+      const minDisplayTime = 1000; // 1 second
+      setTimeout(() => {
+        hideNotification();
+      }, minDisplayTime);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, step]);
+
   // Get the appropriate handler for the current content type
   const getHandler = (): ContentHandler => {
-    switch (contentType) {
-      case 'Service Page':
-        return new ServicePageHandler();
-      case 'Email Sequence':
-        return new EmailSequenceHandler();
-      case 'Social Media Post':
-        return new SocialMediaHandler(platform);
-      case 'Blog Post':
-        return new BlogPostHandler();
-      default:
-        return new BlogPostHandler(); // Use BlogPostHandler as default
+    if (!contentType) {
+      return new BlogPostHandler(); // Use BlogPostHandler as default if no content type selected
     }
+    return HandlerFactory.getHandler(contentType, platform);
   };
 
   const handler = getHandler();
@@ -72,17 +133,30 @@ export function ChatInterface() {
         return;
       }
 
+      // Show notification based on current step
+      if (step === 'topic') {
+        showNotification('Generating title suggestions...');
+      } else if (step === 'keywords') {
+        showNotification('Generating LSI keywords...');
+      }
+
       await handler.processInput(step, input, store);
       setInput('');
       setError(null);
+      
+      // Hide notification after processing is complete
+      setTimeout(() => {
+        hideNotification();
+      }, 1000);
     } catch (error: any) {
       console.error('Error in chat flow:', error);
       setError(error.message || 'An error occurred. Please try again.');
+      hideNotification();
     }
   };
 
   const handlePlatformSelect = async (selectedPlatform: string) => {
-    setPlatform(selectedPlatform);
+    setPlatform(selectedPlatform as Platform);
     setStep('topic');
   };
 
@@ -94,20 +168,30 @@ export function ChatInterface() {
   const handleGenerateOutline = async () => {
     try {
       setError(null);
+      showNotification('Generating outline...');
       await generateOutline();
       setStep('outline');
+      setTimeout(() => {
+        hideNotification();
+      }, 1000);
     } catch (error: any) {
       console.error('Error generating outline:', error);
       setError(error.message || 'Failed to generate outline');
+      hideNotification();
     }
   };
 
   const handleGenerateContent = async () => {
     try {
+      showNotification('Generating content...');
       await generateDraftContent();
       setStep('content');
+      setTimeout(() => {
+        hideNotification();
+      }, 1000);
     } catch (error: any) {
       setError(error.message || 'Failed to generate content');
+      hideNotification();
     }
   };
 
@@ -115,7 +199,15 @@ export function ChatInterface() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Notification banner */}
+      {activeNotification && (
+        <div className="fixed top-0 left-0 right-0 bg-blue-600 text-white px-6 py-4 shadow-lg flex items-center justify-center z-[9999] border-b-2 border-blue-700" style={{ pointerEvents: 'none' }}>
+          <div className="mr-3 animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent"></div>
+          <span className="font-medium text-lg">{activeNotification}</span>
+        </div>
+      )}
+      
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
         <UsageIndicator usageInfo={usageInfo} />
         
         <StepContainer step={step}>
@@ -147,7 +239,7 @@ export function ChatInterface() {
               selectedKeywords={selectedKeywords}
               onSelect={(keyword) => setSelectedKeywords([...selectedKeywords, keyword])}
               onDeselect={(keyword) => setSelectedKeywords(selectedKeywords.filter(k => k !== keyword))}
-              maxSelections={contentType === 'Social Media Post' ? 5 : 10}
+              maxSelections={10}
               onGenerateOutline={handleGenerateOutline}
             />
           )}
@@ -208,12 +300,12 @@ export function ChatInterface() {
             onChange={(e) => setInput(e.target.value)}
             className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
             placeholder={step === 'title' ? 'Enter your own title or select one above' : 'Type your message...'}
-            disabled={isLoading || step === 'outline' || step === 'lsi' || step === 'type' || step === 'platform' || step === 'location-toggle' || step === 'video-type'}
+            disabled={isLoading || step === 'outline' || step === 'lsi' || step === 'type' || step === 'platform' || step === 'location-toggle'}
           />
           <button
             type="submit"
             className="bg-blue-500 text-white rounded-lg px-4 py-2 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition-colors duration-200"
-            disabled={!input.trim() || isLoading || step === 'outline' || step === 'lsi' || step === 'type' || step === 'platform' || step === 'location-toggle' || step === 'video-type'}
+            disabled={!input.trim() || isLoading || step === 'outline' || step === 'lsi' || step === 'type' || step === 'platform' || step === 'location-toggle'}
           >
             <Send className="w-5 h-5" />
           </button>

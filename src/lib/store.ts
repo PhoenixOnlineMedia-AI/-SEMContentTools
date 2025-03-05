@@ -21,13 +21,13 @@ export interface OutlineItem {
 
 export type ContentType = 
   | 'Blog Post'
-  | 'Social Media Post'
   | 'Landing Page'
   | 'Service Page'
   | 'Email Sequence'
-  | 'Video Script'
   | 'Listicle'
-  | 'Resource Guide';
+  | 'Resource Guide'
+  | 'Social Media Post'
+  | 'Video Script';
 
 export type Step = 
   | 'type'
@@ -51,12 +51,12 @@ export type Step =
 export const contentTypeSteps: Record<ContentType, Step[]> = {
   'Blog Post': ['topic', 'title', 'keywords', 'lsi', 'outline', 'content'],
   'Service Page': ['topic', 'business-name', 'location-toggle', 'service-location', 'service-area', 'target-audience', 'keywords', 'lsi', 'title', 'outline', 'content'],
-  'Social Media Post': ['platform', 'topic', 'title', 'hashtags', 'lsi', 'outline', 'content'],
   'Email Sequence': ['topic', 'email-count', 'company-name', 'target-audience', 'title', 'outline', 'content'],
   'Landing Page': ['topic', 'title', 'keywords', 'lsi', 'outline', 'content'],
-  'Video Script': ['platform', 'topic', 'title', 'outline', 'content'],
   'Listicle': ['topic', 'title', 'keywords', 'lsi', 'outline', 'content'],
-  'Resource Guide': ['topic', 'title', 'keywords', 'lsi', 'outline', 'content']
+  'Resource Guide': ['topic', 'title', 'keywords', 'lsi', 'outline', 'content'],
+  'Social Media Post': ['platform', 'topic', 'title', 'hashtags', 'content'],
+  'Video Script': ['platform', 'topic', 'title', 'outline', 'content']
 };
 
 export interface ContentState {
@@ -103,6 +103,7 @@ export interface ContentState {
 
   checkUsageLimit: () => Promise<boolean>;
   incrementUsage: () => Promise<void>;
+  refreshUsageInfo: () => Promise<void>;
   generateTitleSuggestions: (metadata?: any) => Promise<void>;
   generateLSIKeywords: (keywords: string[]) => Promise<void>;
   generateOutline: () => Promise<void>;
@@ -355,40 +356,83 @@ export const useContentStore = create<ContentState>((set, get) => ({
         return false;
       }
 
-      const contentCount = usage?.length || 0;
-      console.log('Current usage:', {
-        contentCount,
-        limit: planDetails.limit,
-        planId: profile?.subscription_tier || 'free',
-        periodStart,
-        periodEnd
-      });
-
       // Update usage info in state
       set({
         usageInfo: {
-          contentCount,
+          contentCount: usage?.length || 0,
           limit: planDetails.limit,
           periodStart,
           periodEnd
         }
       });
 
-      // Return true if user has credits remaining
-      const hasCredits = contentCount < planDetails.limit;
-      if (!hasCredits) {
-        set({ error: `Content limit reached: ${contentCount}/${planDetails.limit} pieces used this month` });
-      } else {
-        set({ 
-          error: null,
-          message: `${contentCount}/${planDetails.limit} pieces used this month (${planDetails.limit - contentCount} remaining)`
-        });
-      }
-      return hasCredits;
+      // Check if user has reached their limit
+      return (usage?.length || 0) < planDetails.limit;
     } catch (error) {
       console.error('Error checking usage limit:', error);
-      set({ error: 'Failed to check content limit. Please try again.' });
       return false;
+    }
+  },
+
+  refreshUsageInfo: async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('No session found for refreshUsageInfo');
+        return;
+      }
+
+      // Get user's profile and subscription info
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('subscription_tier, subscription_status, credits')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        return;
+      }
+
+      // Default to free plan if no active subscription
+      const planDetails = profile?.subscription_tier ? 
+        plans[profile.subscription_tier.toLowerCase() as PlanId] : 
+        plans['free'];
+
+      if (!planDetails?.limit) {
+        console.error('Invalid plan configuration');
+        return;
+      }
+
+      // Get current period
+      const now = new Date();
+      const periodStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+
+      // Get current usage within the period
+      const { data: usage, error: usageError } = await supabase
+        .from('user_content')
+        .select('id, created_at')
+        .eq('user_id', session.user.id)
+        .gte('created_at', periodStart)
+        .lte('created_at', periodEnd);
+
+      if (usageError) {
+        console.error('Error fetching usage:', usageError);
+        return;
+      }
+
+      // Update usage info in state
+      set({
+        usageInfo: {
+          contentCount: usage?.length || 0,
+          limit: planDetails.limit,
+          periodStart,
+          periodEnd
+        }
+      });
+    } catch (error) {
+      console.error('Error refreshing usage info:', error);
     }
   },
 

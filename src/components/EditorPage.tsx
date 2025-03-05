@@ -5,6 +5,7 @@ import { Eye, Code, Save, ArrowLeft, Download, FileText, FileCode, File, FileBox
 import { SEOAnalyzer } from './SEOAnalyzer';
 import { EditorToolbar } from './EditorToolbar';
 import { supabase } from '../lib/supabase';
+import { EditorNotification } from './ui/EditorNotification';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -18,6 +19,8 @@ export function EditorPage() {
   const navigate = useNavigate();
   const editorRef = useRef<HTMLDivElement>(null);
   const [exportTitle, setExportTitle] = useState<string>('');
+  const [activeNotification, setActiveNotification] = useState<string | null>(null);
+  const notificationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { 
     content, 
     setContent,
@@ -41,6 +44,38 @@ export function EditorPage() {
   const lastSelectionRef = useRef<Range | null>(null);
   const [editorContent, setEditorContent] = useState('');
   const hasLoadedContent = useRef(false);
+
+  // Function to show a notification
+  const showNotification = (message: string) => {
+    console.log('Showing editor notification:', message);
+    
+    // Clear any existing timer
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current);
+      notificationTimerRef.current = null;
+    }
+    
+    // Show the notification
+    setActiveNotification(message);
+  };
+
+  // Function to hide a notification
+  const hideNotification = () => {
+    console.log('Hiding editor notification');
+    
+    // Clear any existing timer
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current);
+      notificationTimerRef.current = null;
+    }
+    
+    // Hide the notification after a delay
+    notificationTimerRef.current = setTimeout(() => {
+      console.log('Actually hiding editor notification now');
+      setActiveNotification(null);
+      notificationTimerRef.current = null;
+    }, 1500);
+  };
 
   useEffect(() => {
     if (id && !hasLoadedContent.current) {
@@ -159,7 +194,7 @@ export function EditorPage() {
 
   const loadContent = async (contentId: string) => {
     try {
-      console.log('Loading content for ID:', contentId);
+      showNotification('Loading content...');
       setIsLoading(true);
       const { data, error } = await supabase
         .from('user_content')
@@ -197,9 +232,15 @@ export function EditorPage() {
           setEditorContent(contentToSet);
         }
       }
+      
+      // Hide notification after loading is complete
+      setTimeout(() => {
+        hideNotification();
+      }, 1000);
     } catch (error: any) {
       console.error('Error loading content:', error);
       setError(error.message);
+      hideNotification();
     } finally {
       setIsLoading(false);
     }
@@ -207,6 +248,7 @@ export function EditorPage() {
 
   const handleSave = async () => {
     try {
+      showNotification('Saving content...');
       // Set loading state
       setIsLoading(true);
 
@@ -229,7 +271,11 @@ export function EditorPage() {
       setTimeout(() => {
         document.body.removeChild(messageDiv);
       }, 3000);
-
+      
+      // Hide notification after saving is complete
+      setTimeout(() => {
+        hideNotification();
+      }, 1000);
     } catch (error: any) {
       console.error('Error saving content:', error);
       // Show error message to the user
@@ -242,6 +288,7 @@ export function EditorPage() {
       setTimeout(() => {
         document.body.removeChild(messageDiv);
       }, 5000);
+      hideNotification();
     } finally {
       // Reset loading state
       setIsLoading(false);
@@ -581,116 +628,125 @@ export function EditorPage() {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <div className="lg:col-span-2 space-y-6">
-        <div className="bg-white rounded-lg shadow-lg">
-          <div className="border-b pb-4">
-            <div className="flex justify-between items-center px-4 pt-4">
-              <div className="flex items-center space-x-4">
-                <button
-                  onClick={() => navigate('/content')}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-                <h2 className="text-xl font-semibold">{id ? 'Edit Content' : 'Content Editor'}</h2>
+    <div className="flex flex-col h-full">
+      {/* Notification banner */}
+      <EditorNotification message={activeNotification || ''} isVisible={!!activeNotification} />
+      
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white rounded-lg shadow-lg">
+            <div className="border-b pb-4">
+              <div className="flex justify-between items-center px-4 pt-4">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={() => navigate('/content')}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <h2 className="text-xl font-semibold">{id ? 'Edit Content' : 'Content Editor'}</h2>
+                </div>
+                <div className="flex space-x-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
+                        <Download className="w-4 h-4" />
+                        <span>Export</span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                        <FileText className="w-4 h-4 mr-2" />
+                        <span>Export as PDF</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport('html')}>
+                        <FileCode className="w-4 h-4 mr-2" />
+                        <span>Export as HTML</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport('markdown')}>
+                        <File className="w-4 h-4 mr-2" />
+                        <span>Export as Markdown</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport('doc')}>
+                        <FileBox className="w-4 h-4 mr-2" />
+                        <span>Export as Word</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport('text')}>
+                        <FileText className="w-4 h-4 mr-2" />
+                        <span>Export as Text</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <button
+                    onClick={handleViewToggle}
+                    className="flex items-center space-x-1 px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
+                  >
+                    {showHtml ? <Eye className="w-4 h-4" /> : <Code className="w-4 h-4" />}
+                    <span>{showHtml ? 'Preview' : 'HTML'}</span>
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    className="flex items-center space-x-1 px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                    disabled={isLoading}
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isLoading ? 'Saving...' : 'Save'}</span>
+                  </button>
+                </div>
               </div>
-              <div className="flex space-x-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
-                      <Download className="w-4 h-4" />
-                      <span>Export</span>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                      <FileText className="w-4 h-4 mr-2" />
-                      <span>Export as PDF</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport('html')}>
-                      <FileCode className="w-4 h-4 mr-2" />
-                      <span>Export as HTML</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport('markdown')}>
-                      <File className="w-4 h-4 mr-2" />
-                      <span>Export as Markdown</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport('doc')}>
-                      <FileBox className="w-4 h-4 mr-2" />
-                      <span>Export as Word</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleExport('text')}>
-                      <FileText className="w-4 h-4 mr-2" />
-                      <span>Export as Text</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <button
-                  onClick={handleViewToggle}
-                  className="flex items-center space-x-1 px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
-                >
-                  {showHtml ? <Eye className="w-4 h-4" /> : <Code className="w-4 h-4" />}
-                  <span>{showHtml ? 'Preview' : 'HTML'}</span>
-                </button>
-                <button
-                  onClick={handleSave}
-                  className="flex items-center space-x-1 px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
-                  disabled={isLoading}
-                >
-                  <Save className="w-4 h-4" />
-                  <span>{isLoading ? 'Saving...' : 'Save'}</span>
-                </button>
-              </div>
-            </div>
-            {exportTitle && (
-              <p className="text-gray-600 mt-1 px-4">
-                Title: {exportTitle}
-              </p>
-            )}
-            {error && (
-              <p className="text-red-500 mt-2 text-sm px-4">
-                {error}
-              </p>
-            )}
-          </div>
-          
-          <EditorToolbar onEnhance={handleEnhance} editorRef={editorRef} />
-          
-          <div className="p-4">
-            <div className="grid grid-cols-1 gap-4">
-              {showHtml ? (
-                <textarea
-                  value={editorContent}
-                  onChange={(e) => {
-                    setEditorContent(e.target.value);
-                    setContent(e.target.value);
-                  }}
-                  className="w-full h-[600px] p-4 font-mono text-sm border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="HTML content..."
-                  disabled={isLoading}
-                />
-              ) : (
-                <div
-                  ref={editorRef}
-                  contentEditable
-                  className="w-full h-[600px] p-4 border rounded-lg overflow-y-auto prose prose-sm max-w-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  spellCheck="false"
-                />
+              {exportTitle && (
+                <p className="text-gray-600 mt-1 px-4">
+                  Title: {exportTitle}
+                </p>
+              )}
+              {error && (
+                <p className="text-red-500 mt-2 text-sm px-4">
+                  {error}
+                </p>
               )}
             </div>
+            
+            <EditorToolbar 
+              editorRef={editorRef} 
+              showNotification={showNotification}
+              hideNotification={hideNotification}
+            />
+            
+            <div className="p-4">
+              <div className="grid grid-cols-1 gap-4">
+                {showHtml ? (
+                  <textarea
+                    value={editorContent}
+                    onChange={(e) => {
+                      setEditorContent(e.target.value);
+                      setContent(e.target.value);
+                    }}
+                    className="w-full h-[600px] p-4 font-mono text-sm border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="HTML content..."
+                    disabled={isLoading}
+                  />
+                ) : (
+                  <div
+                    ref={editorRef}
+                    contentEditable
+                    className="w-full h-[600px] p-4 border rounded-lg overflow-y-auto prose prose-sm max-w-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    spellCheck="false"
+                  />
+                )}
+              </div>
 
-            <div className="flex justify-between items-center pt-4 border-t mt-4">
-              <div className="text-sm text-gray-500">
-                Word count: {content.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length}
+              <div className="flex justify-between items-center pt-4 border-t mt-4">
+                <div className="text-sm text-gray-500">
+                  Word count: {content.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="lg:col-span-1">
-        <SEOAnalyzer />
+        <div className="lg:col-span-1">
+          <SEOAnalyzer />
+        </div>
       </div>
     </div>
   );

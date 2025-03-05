@@ -1,18 +1,19 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import {
-  Wand2, Bold, Italic, Underline, Strikethrough, List, ListOrdered,
+  Bold, Italic, Underline, Strikethrough, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Link, Heading1, Heading2,
-  Heading3, Quote, Undo, Redo, Eraser, Type
+  Heading3, Quote, Undo, Redo, Eraser
 } from 'lucide-react';
 import { InsertMenu } from './InsertMenu';
 import { EnhanceMenu } from './EnhanceMenu';
 
 interface EditorToolbarProps {
-  onEnhance: () => void;
   editorRef: React.RefObject<HTMLDivElement>;
+  showNotification?: (message: string) => void;
+  hideNotification?: () => void;
 }
 
-export function EditorToolbar({ onEnhance, editorRef }: EditorToolbarProps) {
+export function EditorToolbar({ editorRef, showNotification, hideNotification }: EditorToolbarProps) {
   const lastSelectionRef = useRef<Range | null>(null);
 
   const saveSelection = () => {
@@ -208,7 +209,11 @@ export function EditorToolbar({ onEnhance, editorRef }: EditorToolbarProps) {
         >
           <Link className="w-4 h-4" />
         </button>
-        <InsertMenu editorRef={editorRef} />
+        <InsertMenu 
+          editorRef={editorRef} 
+          showNotification={showNotification}
+          hideNotification={hideNotification}
+        />
       </div>
 
       {/* Clear Formatting */}
@@ -218,7 +223,11 @@ export function EditorToolbar({ onEnhance, editorRef }: EditorToolbarProps) {
 
       {/* AI Tools */}
       <div className="flex items-center space-x-2">
-        <EnhanceMenu editorRef={editorRef} />
+        <EnhanceMenu 
+          editorRef={editorRef} 
+          showNotification={showNotification}
+          hideNotification={hideNotification}
+        />
       </div>
     </div>
   );

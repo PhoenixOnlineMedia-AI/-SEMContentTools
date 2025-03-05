@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Send, Wand2, GripVertical, Plus, X } from 'lucide-react';
 import {
   DndContext,
@@ -20,12 +20,13 @@ import { CSS } from '@dnd-kit/utilities';
 import { useContentStore } from '../lib/store';
 import { contentTypeCards } from './chat/configs/contentTypes';
 import { HandlerFactory } from './chat/handlers/HandlerFactory';
-import type { ContentType } from '../lib/store';
+import type { ContentType, OutlineItem } from '../lib/store';
 import { format } from 'date-fns';
 import type { ContentTypeConfig } from './chat/configs/contentTypes';
-import type { OutlineItem } from '../lib/store';
-import { PlatformSelector } from './chat/ui/PlatformSelector';
 import type { Platform } from '../lib/deepseek';
+import { BlogPostHandler } from './chat/handlers/BlogPostHandler';
+import type { ContentHandler } from './chat/handlers/ContentHandler';
+import { PlatformSelector } from './chat/ui/PlatformSelector';
 
 interface UsageInfo {
   contentCount: number;
@@ -185,6 +186,8 @@ const UsageIndicator = ({ usageInfo }: { usageInfo: UsageInfo | null }) => {
 
 export function ChatInterface() {
   const [input, setInput] = useState('');
+  const [activeNotification, setActiveNotification] = useState<string | null>(null);
+  const notificationTimerRef = useRef<NodeJS.Timeout | null>(null);
   const store = useContentStore();
   const {
     step,
@@ -222,6 +225,63 @@ export function ChatInterface() {
     }
   }, [checkUsageLimit]);
 
+  // Function to show a notification
+  const showNotification = (message: string) => {
+    console.log('Showing notification:', message);
+    
+    // Clear any existing timer
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current);
+      notificationTimerRef.current = null;
+    }
+    
+    // Show the notification
+    setActiveNotification(message);
+  };
+
+  // Function to hide a notification
+  const hideNotification = () => {
+    console.log('Hiding notification');
+    
+    // Clear any existing timer
+    if (notificationTimerRef.current) {
+      clearTimeout(notificationTimerRef.current);
+      notificationTimerRef.current = null;
+    }
+    
+    // Hide the notification after a delay
+    notificationTimerRef.current = setTimeout(() => {
+      console.log('Actually hiding notification now');
+      setActiveNotification(null);
+      notificationTimerRef.current = null;
+    }, 1500);
+  };
+
+  // Monitor loading state changes
+  useEffect(() => {
+    console.log('isLoading changed:', isLoading, 'step:', step);
+    
+    if (isLoading) {
+      // Show appropriate notification based on current step
+      if (step === 'topic') {
+        showNotification('Generating title suggestions...');
+      } else if (step === 'keywords') {
+        showNotification('Generating LSI keywords...');
+      } else if (step === 'lsi') {
+        showNotification('Generating outline...');
+      } else if (step === 'outline') {
+        showNotification('Generating content...');
+      }
+    } else if (!isLoading && activeNotification) {
+      // Only hide notification if it's been visible for at least 1 second
+      const minDisplayTime = 1000; // 1 second
+      setTimeout(() => {
+        hideNotification();
+      }, minDisplayTime);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, step]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
@@ -235,18 +295,32 @@ export function ChatInterface() {
         return;
       }
 
+      // Show notification based on current step
+      if (step === 'topic') {
+        showNotification('Generating title suggestions...');
+      } else if (step === 'keywords') {
+        showNotification('Generating LSI keywords...');
+      }
+
       await handler.processInput(step, input, store);
       
       setInput('');
+      
+      // Hide notification after processing is complete
+      setTimeout(() => {
+        hideNotification();
+      }, 1000);
     } catch (error: any) {
       console.error('Error in chat flow:', error);
       setError(error.message || 'An error occurred. Please try again.');
+      hideNotification();
     }
   };
 
   const handleContentTypeSelect = (type: ContentType) => {
     HandlerFactory.clearHandlers();
     setContentType(type);
+    // Check if the type is one of the platform-specific content types
     if (type === 'Social Media Post' || type === 'Video Script') {
       setStep('platform');
     }
@@ -276,19 +350,29 @@ export function ChatInterface() {
     }
 
     try {
+      showNotification('Generating outline...');
       await generateOutline();
       setStep('outline');
+      setTimeout(() => {
+        hideNotification();
+      }, 1000);
     } catch (error: any) {
       setError(error.message || 'Failed to generate outline');
+      hideNotification();
     }
   };
 
   const handleGenerateContent = async () => {
     try {
+      showNotification('Generating content...');
       await generateDraftContent();
       setStep('content');
+      setTimeout(() => {
+        hideNotification();
+      }, 1000);
     } catch (error: any) {
       setError(error.message || 'Failed to generate content');
+      hideNotification();
     }
   };
 
@@ -318,13 +402,29 @@ export function ChatInterface() {
   };
 
   // Get the current handler and prompt
-  const currentHandler = contentType && contentType !== '' 
-    ? HandlerFactory.getHandler(contentType as ContentType, platform) 
+  const currentHandler = contentType 
+    ? HandlerFactory.getHandler(contentType, platform) 
     : null;
   const currentPrompt = currentHandler?.getPrompt(step);
 
+  // Get the appropriate handler for the current content type
+  const getHandler = (): ContentHandler => {
+    if (!contentType) {
+      return new BlogPostHandler(); // Use BlogPostHandler as default if no content type selected
+    }
+    return HandlerFactory.getHandler(contentType, platform);
+  };
+
   return (
     <div className="flex flex-col h-full">
+      {/* Notification banner */}
+      {activeNotification && (
+        <div className="fixed top-0 left-0 right-0 bg-blue-600 text-white px-6 py-4 shadow-lg flex items-center justify-center z-[9999] border-b-2 border-blue-700" style={{ pointerEvents: 'none' }}>
+          <div className="mr-3 animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent"></div>
+          <span className="font-medium text-lg">{activeNotification}</span>
+        </div>
+      )}
+      
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <UsageIndicator usageInfo={usageInfo} />
         
@@ -462,7 +562,7 @@ export function ChatInterface() {
                 </SortableContext>
               </DndContext>
 
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => {
                     const newSection: OutlineItem = {
@@ -477,6 +577,54 @@ export function ChatInterface() {
                 >
                   <Plus className="w-4 h-4" />
                   <span>Add Section</span>
+                </button>
+                
+                <button
+                  onClick={() => {
+                    const newSubsection: OutlineItem = {
+                      id: crypto.randomUUID(),
+                      type: 'h2',
+                      content: '',
+                      items: []
+                    };
+                    setOutline([...outline, newSubsection]);
+                  }}
+                  className="flex items-center space-x-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Subsection</span>
+                </button>
+                
+                <button
+                  onClick={() => {
+                    const newList: OutlineItem = {
+                      id: crypto.randomUUID(),
+                      type: 'list',
+                      content: '',
+                      items: ['']
+                    };
+                    setOutline([...outline, newList]);
+                  }}
+                  className="flex items-center space-x-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add List</span>
+                </button>
+                
+                <button
+                  onClick={() => {
+                    const newCTA: OutlineItem = {
+                      id: crypto.randomUUID(),
+                      type: 'cta',
+                      content: '',
+                      items: []
+                    };
+                    setOutline([...outline, newCTA]);
+                  }}
+                  className="flex items-center space-x-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add CTA</span>
                 </button>
                 
                 <button
